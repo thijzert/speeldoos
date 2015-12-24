@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns="https://www.inurbanus.nl/NS/speeldoos/1.0"
+	targetNamespace="https://www.inurbanus.nl/NS/speeldoos/1.0" elementFormDefault="qualified">
+
+	<xs:element name="CarrierCollection">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="Carrier"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="Carrier" type="CarrierExtended"/>
+	<xs:complexType name="CarrierExtended">
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string"/>
+			<xs:element name="Performances">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" minOccurs="1" name="Performance"
+							type="PerformanceExtended"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="hash" type="xs:string"/>
+	</xs:complexType>
+	<xs:complexType name="PerformanceExtended">
+		<xs:sequence>
+			<xs:element name="Work" type="WorkShort"/>
+			<xs:element name="Performers">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="Performer" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:simpleContent>
+									<xs:extension base="xs:string">
+										<xs:attribute name="role">
+											<xs:simpleType>
+												<xs:restriction base="xs:string">
+													<xs:enumeration value="performer"/>
+													<xs:enumeration value="ensemble"/>
+													<xs:enumeration value="orchestra"/>
+													<xs:enumeration value="soloist"/>
+													<xs:enumeration value="conductor"/>
+												</xs:restriction>
+											</xs:simpleType>
+										</xs:attribute>
+									</xs:extension>
+								</xs:simpleContent>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element minOccurs="0" name="Date" type="xs:string"/>
+			<xs:element minOccurs="0" name="Location" type="xs:string"/>
+			<xs:element name="SourceFiles">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="File" type="xs:string"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="WorkShort">
+		<xs:sequence>
+			<xs:element name="Composer" type="ComposerShort"/>
+			<xs:element name="Title" type="xs:string" maxOccurs="unbounded"/>
+			<xs:element maxOccurs="unbounded" name="OpusNumber" minOccurs="1">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="xs:string">
+							<xs:attribute name="IndexName" type="xs:string"/>
+						</xs:extension>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element minOccurs="0" name="Parts">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="Part">
+							<xs:complexType>
+								<xs:simpleContent>
+									<xs:extension base="xs:string">
+										<xs:attribute name="number"/>
+									</xs:extension>
+								</xs:simpleContent>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="Year" type="xs:gYear"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="ComposerShort">
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string"/>
+		</xs:sequence>
+		<xs:attribute name="id"/>
+	</xs:complexType>
+	<xs:element name="MusicCollection">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Composer" type="ComposerExtended"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="ComposerExtended">
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string"/>
+			<xs:element name="Works">
+				<xs:complexType>
+					<xs:sequence maxOccurs="unbounded" minOccurs="0">
+						<xs:element name="Work" type="WorkExtended"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="id"/>
+	</xs:complexType>
+	<xs:complexType name="WorkExtended">
+		<xs:sequence>
+			<xs:element name="Title" type="xs:string" maxOccurs="unbounded"/>
+			<xs:element maxOccurs="unbounded" name="OpusNumber">
+				<xs:complexType>
+					<xs:simpleContent>
+						<xs:extension base="xs:string">
+							<xs:attribute name="IndexName" type="xs:string"/>
+						</xs:extension>
+					</xs:simpleContent>
+				</xs:complexType>
+			</xs:element>
+			<xs:element minOccurs="0" name="Parts">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="Part">
+							<xs:complexType>
+								<xs:simpleContent>
+									<xs:extension base="xs:string">
+										<xs:attribute name="number"/>
+									</xs:extension>
+								</xs:simpleContent>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="Year" type="xs:gYear"/>
+			<xs:element name="Performances">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" minOccurs="0" name="Performance"
+							type="PerformanceShort"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="PerformanceShort">
+		<xs:sequence>
+			<xs:element name="Performers">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element name="Performer" maxOccurs="unbounded">
+							<xs:complexType>
+								<xs:simpleContent>
+									<xs:extension base="xs:string">
+										<xs:attribute name="role">
+											<xs:simpleType>
+												<xs:restriction base="xs:string">
+													<xs:enumeration value="performer"/>
+													<xs:enumeration value="ensemble"/>
+													<xs:enumeration value="orchestra"/>
+													<xs:enumeration value="soloist"/>
+													<xs:enumeration value="conductor"/>
+												</xs:restriction>
+											</xs:simpleType>
+										</xs:attribute>
+									</xs:extension>
+								</xs:simpleContent>
+							</xs:complexType>
+						</xs:element>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+			<xs:element minOccurs="0" name="Date" type="xs:string"/>
+			<xs:element minOccurs="0" name="Location" type="xs:string"/>
+			<xs:element name="SourceFiles">
+				<xs:complexType>
+					<xs:sequence>
+						<xs:element maxOccurs="unbounded" name="File" type="xs:string"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>
