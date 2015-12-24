@@ -1,15 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
-	"fmt"
 	"github.com/ametheus/speeldoos"
 	"log"
 )
 
 var (
-	input_file = flag.String("input_file", "", "Input XML file")
+	input_file  = flag.String("input_file", "", "Input XML file")
+	output_file = flag.String("output_file", "", "Output XML file")
 )
 
 func init() {
@@ -22,9 +21,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	js, err := json.MarshalIndent(foo, "", "   ")
+	err = foo.Write(*output_file)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("%s\n", js)
 }
