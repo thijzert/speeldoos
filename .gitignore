@@ -1,4 +1,5 @@
 /bin/dump/dump
+/bin/extract/extract
 /bin/identity/identity
 /*.xml
 /*.zip
