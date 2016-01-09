@@ -7,6 +7,9 @@
 		<link rel="stylesheet" href="assets/css/demo.css" />
 		<link rel="stylesheet" href="assets/css/jquery.xmleditor.css" />
 		<script src="assets/js/ace.min.js"></script>
+		<script src="assets/js/ace.mode-xml.js"></script>
+		<script src="assets/js/ace.keybinding-vim.js"></script>
+		<script src="assets/js/ace.theme-textmate.js"></script>
 		<script src="assets/js/jquery.min.js"></script>
 		<script src="assets/js/jquery-ui.min.js"></script>
 		<script src="assets/js/json2.js"></script>
@@ -31,9 +34,9 @@
 			$(function() {
 				var extractor = new Xsd2Json("speeldoos.xsd", {"schemaURI": "assets/ns/"});
 
-				$("#xml_editor").xmlEditor({
+				var xml_editor = $("#xml_editor").xmlEditor({
 					schema : extractor.getSchema()
-				});
+				}).xmlEditor( "modeChange", 1 );
 			});
 		</script>
 		<footer>
