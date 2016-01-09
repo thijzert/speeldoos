@@ -32,7 +32,7 @@
 		</div>
 		<script>
 			$(function() {
-				var extractor = new Xsd2Json("speeldoos.xsd", {"schemaURI": "assets/ns/"});
+				var extractor = new Xsd2Json("speeldoos.xsd", {"schemaURI": "assets/ns/", "rootElement": "Carrier"});
 
 				var xml_editor = $("#xml_editor").xmlEditor({
 					schema : extractor.getSchema()

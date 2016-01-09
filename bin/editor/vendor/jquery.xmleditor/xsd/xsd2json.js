@@ -314,8 +314,9 @@ SchemaManager.prototype.setOriginatingRoot = function() {
 		for (var index in this.originatingRoot.elements) {
 			var topLevelElement = this.originatingRoot.elements[index];
 			
-			if (this.options.rootElement != topLevelElement.name) {
+			if (this.options.rootElement == topLevelElement.name) {
 				this.originatingRoot = topLevelElement;
+				break;
 			}
 		}
 	} else {
