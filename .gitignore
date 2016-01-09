@@ -4,3 +4,5 @@
 /*.xml
 /*.zip
 /*.mp3
+/bin/editor/editor
+/bin/editor/bindata.go

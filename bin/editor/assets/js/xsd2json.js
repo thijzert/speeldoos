@@ -1,0 +1,1 @@
+../../vendor/jquery.xmleditor/xsd/xsd2json.js
