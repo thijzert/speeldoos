@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"flag"
 	"fmt"
-	"github.com/ametheus/speeldoos"
+	"github.com/thijzert/speeldoos"
 	"io"
 	"log"
 	"os"

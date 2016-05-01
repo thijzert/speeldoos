@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/ametheus/speeldoos"
+	"github.com/thijzert/speeldoos"
 	"log"
 )
 

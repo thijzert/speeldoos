@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/ametheus/speeldoos"
+	"github.com/thijzert/speeldoos"
 	"log"
 )
 
