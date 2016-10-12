@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-//go:generate go-bindata -pkg main -prefix assets/ assets/...
+//go:generate go-bindata -pkg main assets/...
 
 var httpFlag = flag.String("http", ":8080", "Listen for HTTP connections on this address.")
 var mainTemplate *template.Template
@@ -52,7 +52,7 @@ func assetHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func mainHandler(w http.ResponseWriter, req *http.Request) {
-	var data = struct {}{}
+	var data = struct{}{}
 
 	err := mainTemplate.Execute(w, data)
 	if err != nil {
