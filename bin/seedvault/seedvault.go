@@ -18,6 +18,10 @@ var (
 	input_xml   = flag.String("input_xml", "", "Input XML file")
 	cover_image = flag.String("cover_image", "", "Path to cover image")
 	output_dir  = flag.String("output_dir", "seedvault", "Output directory")
+
+	do_320 = flag.Bool("320", false, "Also encode MP3-320")
+	do_v0  = flag.Bool("v0", false, "Also encode V0")
+	do_v2  = flag.Bool("v2", true, "Also encode V2")
 )
 
 func init() {
@@ -47,6 +51,8 @@ func main() {
 		croak(err)
 	}
 
+	fileList := make([]string, 0, 10)
+
 	for _, pf := range foo.Performances {
 		title := "(no title)"
 		if len(pf.Work.Title) > 0 {
@@ -66,8 +72,9 @@ func main() {
 			if len(pf.Work.Parts) > 1 && len(pf.Work.Parts) > i {
 				fileTitle = fmt.Sprintf("%s - %d. %s", title, i+1, pf.Work.Parts[i])
 			}
-			out := fmt.Sprintf("%02d - %s - %s.flac", track_counter, pf.Work.Composer.Name, fileTitle)
-			out = path.Join(*output_dir, "flac", out)
+			out := fmt.Sprintf("%02d - %s - %s", track_counter, pf.Work.Composer.Name, fileTitle)
+			fileList = append(fileList, out)
+			out = path.Join(*output_dir, "flac", out+".flac")
 
 			f, err := os.Create(out)
 			croak(err)
@@ -96,7 +103,65 @@ func main() {
 			croak(cmd.Wait())
 		}
 	}
-	log.Printf("FLAC run complete\n")
+	log.Printf("FLAC run complete")
+
+	log.Printf("Decoding to WAV...")
+	croak(os.Mkdir(path.Join(*output_dir, "wav"), 0755))
+	for _, f := range fileList {
+		in := path.Join(*output_dir, "flac", f+".flac")
+		out := path.Join(*output_dir, "wav", f+".wav")
+		cmd := exec.Command("flac", "-d", "-s", "-o", out, in)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Start()
+		croak(cmd.Wait())
+	}
+	log.Printf("Done decoding.")
+
+	if *do_v2 {
+		log.Printf("Encoding V2 profile...")
+		croak(os.Mkdir(path.Join(*output_dir, "v2"), 0755))
+		for _, f := range fileList {
+			in := path.Join(*output_dir, "wav", f+".wav")
+			out := path.Join(*output_dir, "v2", f+".mp3")
+			cmd := exec.Command("lame", "--quiet", "-V2", "--vbr-new", "--id3v2-only", "--replaygain-accurate", in, out)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Start()
+			croak(cmd.Wait())
+		}
+		log.Printf("Done encoding.")
+	}
+
+	if *do_v0 {
+		log.Printf("Encoding V0 profile...")
+		croak(os.Mkdir(path.Join(*output_dir, "v0"), 0755))
+		for _, f := range fileList {
+			in := path.Join(*output_dir, "wav", f+".wav")
+			out := path.Join(*output_dir, "v0", f+".mp3")
+			cmd := exec.Command("lame", "--quiet", "-V0", "--vbr-new", "--id3v2-only", "--replaygain-accurate", in, out)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Start()
+			croak(cmd.Wait())
+		}
+		log.Printf("Done encoding.")
+	}
+
+	if *do_320 {
+		log.Printf("Encoding 320 profile...")
+		croak(os.Mkdir(path.Join(*output_dir, "320"), 0755))
+		for _, f := range fileList {
+			in := path.Join(*output_dir, "wav", f+".wav")
+			out := path.Join(*output_dir, "320", f+".mp3")
+			cmd := exec.Command("lame", "--quiet", "-b", "320", "--id3v2-only", "--replaygain-accurate", in, out)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Start()
+			croak(cmd.Wait())
+		}
+		log.Printf("Done encoding.")
+	}
 }
 
 type ZipMap struct {
