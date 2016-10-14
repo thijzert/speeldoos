@@ -74,7 +74,24 @@ func main() {
 
 			mm := &mFile{
 				Basename: out,
+				Title:    fileTitle,
+				Artist:   pf.Work.Composer.Name,
+				Album:    foo.Name,
+				Composer: pf.Work.Composer.Name,
+				Year:     pf.Year,
+				Track:    track_counter,
 			}
+
+			for _, p := range pf.Performers {
+				if (p.Role == "soloist" || p.Role == "performer") && mm.Soloist == "" {
+					mm.Soloist = p.Name
+				} else if (p.Role == "orchestra" || p.Role == "ensemble") && mm.Orchestra == "" {
+					mm.Orchestra = p.Name
+				} else if p.Role == "conductor" && mm.Conductor == "" {
+					mm.Conductor = p.Name
+				}
+			}
+
 			albus = append(albus, mm)
 
 			out = path.Join(*output_dir, "flac", out+".flac")
@@ -119,18 +136,21 @@ func main() {
 	if *do_v2 {
 		log.Printf("Encoding V2 profile...")
 		albus.Job("v2", lameRun("-V2", "--vbr-new"))
+		albus.Job("v2", id3tags)
 		log.Printf("Done encoding.")
 	}
 
 	if *do_v0 {
 		log.Printf("Encoding V0 profile...")
 		albus.Job("v0", lameRun("-V0", "--vbr-new"))
+		albus.Job("v0", id3tags)
 		log.Printf("Done encoding.")
 	}
 
 	if *do_320 {
 		log.Printf("Encoding 320 profile...")
 		albus.Job("320", lameRun("-b", "320"))
+		albus.Job("320", id3tags)
 		log.Printf("Done encoding.")
 	}
 }
@@ -217,7 +237,10 @@ func writeFlacTag(f io.Writer, key, value string) {
 type jobFun func(*mFile, string, string) *exec.Cmd
 
 type mFile struct {
-	Basename string
+	Basename                                string
+	Title, Artist, Album                    string
+	Composer, Soloist, Orchestra, Conductor string
+	Year, Track                             int
 }
 
 type album []*mFile
@@ -265,8 +288,43 @@ func (a album) Job(dir string, fun jobFun) {
 func lameRun(extraArgs ...string) jobFun {
 	return func(s *mFile, in, out string) *exec.Cmd {
 		cmdline := []string{"--quiet", "--replaygain-accurate", "--id3v2-only"}
+
 		cmdline = append(cmdline, extraArgs...)
 		cmdline = append(cmdline, in, out+".mp3")
+
 		return exec.Command("lame", cmdline...)
 	}
+}
+
+func id3tags(s *mFile, in, out string) *exec.Cmd {
+	args := []string{
+		"-t", s.Title,
+		"-a", s.Artist,
+		"--TCOM", s.Composer,
+		"--genre", "32",
+	}
+	if s.Album != "" {
+		args = append(args, "-A", s.Album)
+	}
+
+	if s.Year != 0 {
+		args = append(args, "-y", fmt.Sprintf("%d", s.Year))
+	}
+	if s.Track != 0 {
+		args = append(args, "-T", fmt.Sprintf("%d", s.Track))
+	}
+
+	if s.Soloist != "" {
+		args = append(args, "--TPE1", s.Soloist)
+	}
+	if s.Orchestra != "" {
+		args = append(args, "--TPE2", s.Orchestra)
+	}
+	if s.Conductor != "" {
+		args = append(args, "--TPE3", s.Conductor)
+	}
+
+	args = append(args, out+".mp3")
+
+	return exec.Command("id3v2", args...)
 }
