@@ -36,6 +36,7 @@ type Performer struct {
 
 type Performance struct {
 	Work        Work
+	Year        int         `xml:",omitempty"`
 	Performers  []Performer `xml:"Performers>Performer"`
 	SourceFiles []string    `xml:"SourceFiles>File"`
 }
