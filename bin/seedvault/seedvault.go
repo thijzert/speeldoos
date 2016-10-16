@@ -75,7 +75,6 @@ func main() {
 			mm := &mFile{
 				Basename: out,
 				Title:    fileTitle,
-				Artist:   pf.Work.Composer.Name,
 				Album:    foo.Name,
 				Composer: pf.Work.Composer.Name,
 				Year:     pf.Year,
@@ -83,6 +82,10 @@ func main() {
 			}
 
 			for _, p := range pf.Performers {
+				if mm.Artist == "" {
+					mm.Artist = p.Name
+				}
+
 				if (p.Role == "soloist" || p.Role == "performer") && mm.Soloist == "" {
 					mm.Soloist = p.Name
 				} else if (p.Role == "orchestra" || p.Role == "ensemble") && mm.Orchestra == "" {
