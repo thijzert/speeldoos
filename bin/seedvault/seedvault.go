@@ -116,12 +116,16 @@ func main() {
 			croak(err)
 			cmd.Start()
 
-			writeFlacTag(pipeIn, "title", fileTitle)
-			writeFlacTag(pipeIn, "artist", pf.Work.Composer.Name)
-			writeFlacTag(pipeIn, "composer", pf.Work.Composer.Name)
+			writeFlacTag(pipeIn, "title", mm.Title)
+			writeFlacTag(pipeIn, "artist", mm.Artist)
+			writeFlacTag(pipeIn, "album", mm.Album)
+			writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
+			writeFlacTag(pipeIn, "composer", mm.Composer)
 			for _, p := range pf.Performers {
 				writeFlacTag(pipeIn, "performer", p.Name)
 			}
+			writeFlacTag(pipeIn, "date", fmt.Sprintf("%d", mm.Year))
+			writeFlacTag(pipeIn, "genre", "classical") // FIXME
 			pipeIn.Close()
 			croak(cmd.Wait())
 		}
