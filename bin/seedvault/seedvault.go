@@ -16,9 +16,15 @@ import (
 )
 
 var (
-	input_xml   = flag.String("input_xml", "", "Input XML file")
+	input_xml  = flag.String("input_xml", "", "Input XML file")
+	output_dir = flag.String("output_dir", "seedvault", "Output directory")
+
 	cover_image = flag.String("cover_image", "", "Path to cover image")
-	output_dir  = flag.String("output_dir", "seedvault", "Output directory")
+	inlay_image = flag.String("inlay_image", "", "Path to inlay image")
+	eac_logfile = flag.String("eac_logfile", "", "Path to EAC log file")
+	cuesheet    = flag.String("cuesheet", "", "Path to cuesheet")
+
+	tracker_url = flag.String("tracker", "", "URL to private tracker")
 
 	do_320 = flag.Bool("320", false, "Also encode MP3-320")
 	do_v0  = flag.Bool("v0", false, "Also encode V0")
@@ -46,10 +52,21 @@ func main() {
 
 	log.Printf("Initiating .flac run...")
 
-	croak(os.Mkdir(*output_dir, 0755))
-	croak(os.Mkdir(path.Join(*output_dir, "flac"), 0755))
+	albus := newAlbum(foo.Name)
+	for _, pf := range foo.Performances {
+		for _, p := range pf.Performers {
+			if p.Name != "" {
+				albus.Name = p.Name + " - " + foo.Name
+				break
+			}
+		}
+		if albus.Name != foo.Name {
+			break
+		}
+	}
 
-	albus := album{}
+	croak(os.Mkdir(*output_dir, 0755))
+	croak(os.Mkdir(path.Join(*output_dir, albus.Name+" [FLAC]"), 0755))
 
 	for _, pf := range foo.Performances {
 		title := "(no title)"
@@ -95,9 +112,9 @@ func main() {
 				}
 			}
 
-			albus = append(albus, mm)
+			albus.Add(mm)
 
-			out = path.Join(*output_dir, "flac", out+".flac")
+			out = path.Join(*output_dir, albus.Name+" [FLAC]", out+".flac")
 
 			f, err := os.Create(out)
 			croak(err)
@@ -134,30 +151,27 @@ func main() {
 
 	log.Printf("Decoding to WAV...")
 	croak(os.Mkdir(path.Join(*output_dir, "wav"), 0755))
-	albus.Job("flac", func(mf *mFile, out, in string) *exec.Cmd {
+	albus.Job("FLAC", func(mf *mFile, out, in string) []*exec.Cmd {
 		// HACK: Decoding is achieved by working in the flac/ dir and swapping the input and output parameters
-		return exec.Command("flac", "-d", "-s", "-o", out, in+".flac")
+		return []*exec.Cmd{exec.Command("flac", "-d", "-s", "-o", out, in+".flac")}
 	})
 	log.Printf("Done decoding.")
 
 	if *do_v2 {
 		log.Printf("Encoding V2 profile...")
-		albus.Job("v2", lameRun("-V2", "--vbr-new"))
-		albus.Job("v2", id3tags)
+		albus.Job("V2", lameRun("-V2", "--vbr-new"))
 		log.Printf("Done encoding.")
 	}
 
 	if *do_v0 {
 		log.Printf("Encoding V0 profile...")
-		albus.Job("v0", lameRun("-V0", "--vbr-new"))
-		albus.Job("v0", id3tags)
+		albus.Job("V0", lameRun("-V0", "--vbr-new"))
 		log.Printf("Done encoding.")
 	}
 
 	if *do_320 {
 		log.Printf("Encoding 320 profile...")
 		albus.Job("320", lameRun("-b", "320"))
-		albus.Job("320", id3tags)
 		log.Printf("Done encoding.")
 	}
 }
@@ -226,6 +240,19 @@ func croak(e error) {
 	}
 }
 
+func cleanFilename(value string) string {
+	value = strings.Replace(value, "\n", " ", -1)
+	value = strings.Replace(value, "\r", " ", -1)
+	value = strings.Replace(value, "\t", " ", -1)
+	value = strings.Replace(value, "\x00", " ", -1)
+	value = strings.Replace(value, "=", "", -1)
+	value = strings.Replace(value, ":", "", -1)
+	value = strings.Replace(value, "?", "", -1)
+	value = strings.Replace(value, "/", "-", -1)
+
+	return value
+}
+
 func writeFlacTag(f io.Writer, key, value string) {
 	if value == "" {
 		return
@@ -241,7 +268,7 @@ func writeFlacTag(f io.Writer, key, value string) {
 	f.Write([]byte(d))
 }
 
-type jobFun func(*mFile, string, string) *exec.Cmd
+type jobFun func(*mFile, string, string) []*exec.Cmd
 
 type mFile struct {
 	Basename                                string
@@ -250,30 +277,47 @@ type mFile struct {
 	Year, Track                             int
 }
 
-type album []*mFile
+type album struct {
+	Name   string
+	Tracks []*mFile
+}
 
-func (a album) Job(dir string, fun jobFun) {
-	croak(os.MkdirAll(path.Join(*output_dir, dir), 0755))
+func newAlbum(name string) *album {
+	return &album{
+		Name:   name,
+		Tracks: make([]*mFile, 0, 20),
+	}
+}
 
-	cmds := make(chan *exec.Cmd)
+func (a *album) Add(mm *mFile) {
+	a.Tracks = append(a.Tracks, mm)
+}
+
+func (a *album) Job(dir string, fun jobFun) {
+	working_dir := path.Join(*output_dir, a.Name+" ["+dir+"]")
+	croak(os.MkdirAll(working_dir, 0755))
+
+	cmds := make(chan []*exec.Cmd)
 	var wg sync.WaitGroup
 
 	for i := 0; i < *conc_jobs; i++ {
 		go func() {
 			wg.Add(1)
-			for cmd := range cmds {
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				cmd.Start()
-				croak(cmd.Wait())
+			for cmdList := range cmds {
+				for _, cmd := range cmdList {
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					cmd.Start()
+					croak(cmd.Wait())
+				}
 			}
 			wg.Done()
 		}()
 	}
 
-	for _, mf := range a {
+	for _, mf := range a.Tracks {
 		in := path.Join(*output_dir, "wav", mf.Basename+".wav")
-		out := path.Join(*output_dir, dir, mf.Basename)
+		out := path.Join(working_dir, cleanFilename(mf.Basename))
 
 		cmds <- fun(mf, in, out)
 	}
@@ -282,24 +326,75 @@ func (a album) Job(dir string, fun jobFun) {
 
 	if *cover_image != "" {
 		f, err := zm.Get(*cover_image)
-		croak(err)
-		g, err := os.Create(path.Join(*output_dir, dir, "cover.jpeg"))
-		croak(err)
-		_, err = io.Copy(g, f)
-		croak(err)
+		if err != nil {
+			log.Print(err)
+		} else {
+			g, err := os.Create(path.Join(working_dir, "folder.jpg"))
+			croak(err)
+			_, err = io.Copy(g, f)
+			croak(err)
+		}
+	}
+
+	if *inlay_image != "" {
+		f, err := zm.Get(*inlay_image)
+		if err != nil {
+			log.Print(err)
+		} else {
+			g, err := os.Create(path.Join(working_dir, "inlay.jpg"))
+			croak(err)
+			_, err = io.Copy(g, f)
+			croak(err)
+		}
+	}
+
+	if *cuesheet != "" {
+		f, err := zm.Get(*cuesheet)
+		if err != nil {
+			log.Print(err)
+		} else {
+			g, err := os.Create(path.Join(working_dir, "cuesheet.cue"))
+			croak(err)
+			_, err = io.Copy(g, f)
+			croak(err)
+		}
+	}
+
+	if *eac_logfile != "" {
+		f, err := zm.Get(*eac_logfile)
+		if err != nil {
+			log.Print(err)
+		} else {
+			g, err := os.Create(path.Join(working_dir, "eac.log"))
+			croak(err)
+			_, err = io.Copy(g, f)
+			croak(err)
+		}
 	}
 
 	wg.Wait()
+
+	if *tracker_url != "" {
+		// working_dir := path.Join(*output_dir, a.Name+" ["+dir+"]")
+		cmd := exec.Command("mktorrent", "-a", *tracker_url, "-p", working_dir, "-o", working_dir+".torrent")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Start()
+		croak(cmd.Wait())
+	}
 }
 
 func lameRun(extraArgs ...string) jobFun {
-	return func(s *mFile, in, out string) *exec.Cmd {
+	return func(s *mFile, in, out string) []*exec.Cmd {
 		cmdline := []string{"--quiet", "--replaygain-accurate", "--id3v2-only"}
 
 		cmdline = append(cmdline, extraArgs...)
 		cmdline = append(cmdline, in, out+".mp3")
 
-		return exec.Command("lame", cmdline...)
+		return []*exec.Cmd{
+			exec.Command("lame", cmdline...),
+			id3tags(s, in, out),
+		}
 	}
 }
 

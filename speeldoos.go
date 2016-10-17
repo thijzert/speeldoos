@@ -8,7 +8,7 @@ import (
 
 type Composer struct {
 	Name string
-	ID   string `xml:"id,attr"`
+	ID   string `xml:"id,attr,omitempty"`
 }
 
 type OpusNumber struct {
