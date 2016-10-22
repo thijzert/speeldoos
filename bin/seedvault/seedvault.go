@@ -66,7 +66,7 @@ func main() {
 	}
 
 	croak(os.Mkdir(*output_dir, 0755))
-	croak(os.Mkdir(path.Join(*output_dir, albus.Name+" [FLAC]"), 0755))
+	croak(os.Mkdir(path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]"), 0755))
 
 	for _, pf := range foo.Performances {
 		title := "(no title)"
@@ -114,7 +114,7 @@ func main() {
 
 			albus.Add(mm)
 
-			out = path.Join(*output_dir, albus.Name+" [FLAC]", out+".flac")
+			out = path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]", cleanFilename(out)+".flac")
 
 			f, err := os.Create(out)
 			croak(err)
@@ -294,7 +294,7 @@ func (a *album) Add(mm *mFile) {
 }
 
 func (a *album) Job(dir string, fun jobFun) {
-	working_dir := path.Join(*output_dir, a.Name+" ["+dir+"]")
+	working_dir := path.Join(*output_dir, cleanFilename(a.Name)+" ["+dir+"]")
 	croak(os.MkdirAll(working_dir, 0755))
 
 	cmds := make(chan []*exec.Cmd)
