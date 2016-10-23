@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"github.com/thijzert/go-rcfile"
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
 	"io"
@@ -38,7 +39,9 @@ var (
 var zm = &ZipMap{}
 
 func init() {
+	rcfile.Parse()
 	flag.Parse()
+
 	if *conc_jobs < 1 {
 		*conc_jobs = 1
 	}
