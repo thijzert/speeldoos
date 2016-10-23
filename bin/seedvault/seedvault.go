@@ -2,8 +2,10 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"flag"
 	"fmt"
+	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
 	"io"
 	"log"
@@ -40,6 +42,52 @@ func init() {
 	if *conc_jobs < 1 {
 		*conc_jobs = 1
 	}
+
+	confirmSettings()
+}
+
+func confirmSettings() {
+	fmt.Printf("\nAbout to start an encode with the following settings:\n")
+
+	fmt.Printf("\nInput XML file: %s %s\n", fileExists(*input_xml), *input_xml)
+	fmt.Printf("Output directory: %s\n", *output_dir)
+
+	fmt.Printf("\nCover image:  %s %s\n", fileExists(*cover_image), *cover_image)
+	fmt.Printf("Inlay image:  %s %s\n", fileExists(*inlay_image), *inlay_image)
+	fmt.Printf("EAC log file: %s %s\n", fileExists(*eac_logfile), *eac_logfile)
+	fmt.Printf("Cue sheet:    %s %s\n", fileExists(*cuesheet), *cuesheet)
+
+	fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(*tracker_url))
+
+	fmt.Printf("\nEncodes to run: FLAC    %s\n", yes(true))
+	fmt.Printf("                MP3-320 %s\n", yes(*do_320))
+	fmt.Printf("                MP3-V0  %s\n", yes(*do_v0))
+	fmt.Printf("                MP3-V2  %s\n", yes(*do_v2))
+	fmt.Printf("Number of concurrent encoding processes:  %d\n", *conc_jobs)
+
+	fmt.Printf("\nIf the above looks good, hit <enter> to continue.\n")
+	fmt.Printf("Otherwise, hit Ctrl+C to cancel the process.\n")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
+}
+
+func fileExists(filename string) string {
+	if filename == "" {
+		return tc.Bblack("(not specified)")
+	}
+
+	_, err := os.Stat(filename)
+	if err == nil {
+		return tc.Green("\u2713")
+	}
+
+	return tc.Red("not found")
+}
+
+func yes(i bool) string {
+	if i {
+		return tc.Green("yes")
+	}
+	return tc.Bblack("no")
 }
 
 func main() {
