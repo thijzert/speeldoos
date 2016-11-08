@@ -36,7 +36,7 @@ type Performer struct {
 
 type SourceFile struct {
 	Filename string `xml:",chardata"`
-	Disc     int    `xml:"role,attr,omitempty"`
+	Disc     int    `xml:"disc,attr,omitempty"`
 }
 
 func (s SourceFile) String() string {
