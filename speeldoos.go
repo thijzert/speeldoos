@@ -36,7 +36,7 @@ type Performer struct {
 
 type SourceFile struct {
 	Filename string `xml:",chardata"`
-	Disc int `xml:"role,attr,omitempty"`
+	Disc     int    `xml:"role,attr,omitempty"`
 }
 
 func (s SourceFile) String() string {
@@ -52,7 +52,7 @@ type Performance struct {
 
 type Carrier struct {
 	Name         string
-	ID           string        `xml:"id,attr,omitempty"`
+	ID           string        `xml:",omitempty"`
 	Hash         string        `xml:"hash,attr"`
 	Performances []Performance `xml:"Performances>Performance"`
 }

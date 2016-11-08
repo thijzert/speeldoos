@@ -29,9 +29,10 @@ var (
 
 	tracker_url = flag.String("tracker", "", "URL to private tracker")
 
-	do_320 = flag.Bool("320", false, "Also encode MP3-320")
-	do_v0  = flag.Bool("v0", false, "Also encode V0")
-	do_v2  = flag.Bool("v2", true, "Also encode V2")
+	do_archive = flag.Bool("archive", true, "Create a speeldoos archive")
+	do_320     = flag.Bool("320", false, "Also encode MP3-320")
+	do_v0      = flag.Bool("v0", false, "Also encode V0")
+	do_v2      = flag.Bool("v2", false, "Also encode V2")
 
 	conc_jobs = flag.Int("j", 2, "Number of concurrent jobs")
 )
@@ -66,6 +67,7 @@ func confirmSettings() {
 	fmt.Printf("                MP3-320 %s\n", yes(*do_320))
 	fmt.Printf("                MP3-V0  %s\n", yes(*do_v0))
 	fmt.Printf("                MP3-V2  %s\n", yes(*do_v2))
+	fmt.Printf("                archive %s\n", yes(*do_archive))
 	fmt.Printf("Number of concurrent encoding processes:  %d\n", *conc_jobs)
 
 	fmt.Printf("\nIf the above looks good, hit <enter> to continue.\n")
@@ -201,13 +203,19 @@ func main() {
 	}
 	log.Printf("FLAC run complete")
 
-	log.Printf("Decoding to WAV...")
-	croak(os.Mkdir(path.Join(*output_dir, "wav"), 0755))
-	albus.Job("FLAC", func(mf *mFile, out, in string) []*exec.Cmd {
-		// HACK: Decoding is achieved by working in the flac/ dir and swapping the input and output parameters
-		return []*exec.Cmd{exec.Command("flac", "-d", "-s", "-o", out, in+".flac")}
-	})
-	log.Printf("Done decoding.")
+	if *do_v2 || *do_v0 || *do_320 {
+		log.Printf("Decoding to WAV...")
+		croak(os.Mkdir(path.Join(*output_dir, "wav"), 0755))
+		albus.Job("FLAC", func(mf *mFile, out, in string) []*exec.Cmd {
+			// HACK: Decoding is achieved by working in the flac/ dir and swapping the input and output parameters
+			return []*exec.Cmd{exec.Command("flac", "-d", "-s", "-o", out, in+".flac")}
+		})
+		log.Printf("Done decoding.")
+	} else {
+		albus.Job("FLAC", func(_ *mFile, _, _ string) []*exec.Cmd {
+			return []*exec.Cmd{exec.Command("true")}
+		})
+	}
 
 	if *do_v2 {
 		log.Printf("Encoding V2 profile...")
@@ -225,6 +233,36 @@ func main() {
 		log.Printf("Encoding 320 profile...")
 		albus.Job("320", lameRun("-b", "320"))
 		log.Printf("Done encoding.")
+	}
+
+	if *do_archive {
+		archive_name := foo.ID
+		if archive_name == "" {
+			archive_name = "speeldoos"
+		}
+		archive_name = cleanFilename(archive_name)
+		archive_name = strings.Replace(archive_name, " ", "-", -1)
+		c := exec.Command("zip", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
+		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		c.Start()
+		croak(c.Wait())
+
+		bar, err := speeldoos.ImportCarrier(*input_xml)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		sourcefile_counter := 0
+		for i, pf := range bar.Performances {
+			for j, _ := range pf.SourceFiles {
+				bar.Performances[i].SourceFiles[j].Filename = path.Join(archive_name+".zip", cleanFilename(albus.Tracks[sourcefile_counter].Basename)+".flac")
+				sourcefile_counter++
+			}
+		}
+
+		bar.Write(path.Join(*output_dir, archive_name+".xml"))
 	}
 }
 
@@ -298,6 +336,7 @@ func cleanFilename(value string) string {
 	value = strings.Replace(value, "\t", " ", -1)
 	value = strings.Replace(value, "\x00", " ", -1)
 	value = strings.Replace(value, "=", "", -1)
+	value = strings.Replace(value, "\"", "", -1)
 	value = strings.Replace(value, ":", "", -1)
 	value = strings.Replace(value, "?", "", -1)
 	value = strings.Replace(value, "/", "-", -1)
