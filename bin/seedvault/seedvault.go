@@ -573,6 +573,15 @@ func (a *album) Job(dir string, fun jobFun) {
 		}
 	}
 
+	// Add any additional files to the root dir
+	args := flag.Args()
+	for _, f := range args {
+		err := zm.CopyTo(f, path.Join(working_dir, path.Base(f)))
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
 	if *cuesheet != "" {
 		for _, d := range a.Discs {
 			sd, dd := "", ""
