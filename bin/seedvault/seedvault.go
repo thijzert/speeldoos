@@ -48,20 +48,67 @@ func init() {
 	if *conc_jobs < 1 {
 		*conc_jobs = 1
 	}
-
-	confirmSettings()
 }
 
-func confirmSettings() {
+func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("\nAbout to start an encode with the following settings:\n")
 
-	fmt.Printf("\nInput XML file: %s %s\n", fileExists(*input_xml), *input_xml)
+	fmt.Printf("\nInput XML file: %s %s\n", checkFileExists(*input_xml), *input_xml)
 	fmt.Printf("Output directory: %s\n", *output_dir)
 
-	fmt.Printf("\nCover image:  %s %s\n", fileExists(*cover_image), *cover_image)
-	fmt.Printf("Inlay image:  %s %s\n", fileExists(*inlay_image), *inlay_image)
-	fmt.Printf("EAC log file: %s %s\n", fileExists(*eac_logfile), *eac_logfile)
-	fmt.Printf("Cue sheet:    %s %s\n", fileExists(*cuesheet), *cuesheet)
+	carrier, err := speeldoos.ImportCarrier(*input_xml)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	discs := make(map[int]int)
+	for _, pf := range carrier.Performances {
+		for _, sf := range pf.SourceFiles {
+			discs[sf.Disc] = sf.Disc
+		}
+	}
+
+	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(*cover_image), *cover_image)
+	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(*inlay_image), *inlay_image)
+
+	if len(discs) > 1 {
+		fmt.Printf("Discs:       ")
+		for d, _ := range discs {
+			fmt.Printf("% 3d", d)
+		}
+		fmt.Printf("\n")
+
+		fmt.Printf("EAC log file: ")
+		if *eac_logfile == "" {
+			fmt.Printf("%s\n", checkFileExists(""))
+		} else {
+			for d, _ := range discs {
+				sub := ""
+				if d > 0 {
+					sub = fmt.Sprintf("disc_%02d", d)
+				}
+				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *eac_logfile)))
+			}
+			fmt.Printf("%s\n", *eac_logfile)
+		}
+
+		fmt.Printf("Cue sheet:    ")
+		if *cuesheet == "" {
+			fmt.Printf("%s\n", checkFileExists(""))
+		} else {
+			for d, _ := range discs {
+				sub := ""
+				if d > 0 {
+					sub = fmt.Sprintf("disc_%02d", d)
+				}
+				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *cuesheet)))
+			}
+			fmt.Printf("%s\n", *cuesheet)
+		}
+	} else {
+		fmt.Printf("EAC log file: %s %s\n", checkFileExists(*eac_logfile), *eac_logfile)
+		fmt.Printf("Cue sheet:    %s %s\n", checkFileExists(*cuesheet), *cuesheet)
+	}
 
 	fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(*tracker_url))
 
@@ -75,19 +122,32 @@ func confirmSettings() {
 	fmt.Printf("\nIf the above looks good, hit <enter> to continue.\n")
 	fmt.Printf("Otherwise, hit Ctrl+C to cancel the process.\n")
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
+
+	if *cover_image != "" && !fileExists(*cover_image) {
+		*cover_image = ""
+	}
+	if *inlay_image != "" && !fileExists(*inlay_image) {
+		*inlay_image = ""
+	}
+
+	return carrier
 }
 
-func fileExists(filename string) string {
+func checkFileExists(filename string) string {
 	if filename == "" {
 		return tc.Bblack("(not specified)")
 	}
 
-	_, err := os.Stat(filename)
-	if err == nil {
+	if fileExists(filename) {
 		return tc.Green("\u2713")
 	}
 
 	return tc.Red("not found")
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil
 }
 
 func yes(i bool) string {
@@ -98,10 +158,7 @@ func yes(i bool) string {
 }
 
 func main() {
-	foo, err := speeldoos.ImportCarrier(*input_xml)
-	if err != nil {
-		log.Fatal(err)
-	}
+	foo := confirmSettings()
 
 	track_counter := 0
 	current_disc := 0
@@ -119,6 +176,17 @@ func main() {
 		if albus.Name != foo.Name {
 			break
 		}
+	}
+
+	discs := make(map[int]int)
+	for _, pf := range foo.Performances {
+		for _, sf := range pf.SourceFiles {
+			discs[sf.Disc] = sf.Disc
+		}
+	}
+	albus.Discs = make([]int, 0, len(discs))
+	for d, _ := range discs {
+		albus.Discs = append(albus.Discs, d)
 	}
 
 	croak(os.Mkdir(*output_dir, 0755))
@@ -180,7 +248,7 @@ func main() {
 
 			sub := ""
 			if sf.Disc != 0 {
-				sub = fmt.Sprintf("disc_%02d",sf.Disc)
+				sub = fmt.Sprintf("disc_%02d", sf.Disc)
 				croak(os.MkdirAll(path.Join(*output_dir, "wav", sub), 0755))
 			}
 			dir := path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]", sub)
@@ -351,6 +419,23 @@ func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
 	return rv, os.ErrNotExist
 }
 
+func (z *ZipMap) CopyTo(filename, destination string) error {
+	f, err := zm.Get(filename)
+	defer f.Close()
+
+	if err != nil {
+		return err
+	} else {
+		g, err := os.Create(destination)
+		defer g.Close()
+		croak(err)
+
+		_, err = io.Copy(g, f)
+		croak(err)
+	}
+	return nil
+}
+
 func croak(e error) {
 	if e != nil {
 		log.Fatal(e)
@@ -399,6 +484,7 @@ type mFile struct {
 
 type album struct {
 	Name   string
+	Discs  []int
 	Tracks []*mFile
 }
 
@@ -422,7 +508,7 @@ func (a *album) Job(dir string, fun jobFun) {
 		if mf.Disc != 0 {
 			found, _ := discs[mf.Disc]
 			if found != 3 {
-				croak(os.MkdirAll(path.Join(working_dir,fmt.Sprintf("disc_%02d",mf.Disc)), 0755))
+				croak(os.MkdirAll(path.Join(working_dir, fmt.Sprintf("disc_%02d", mf.Disc)), 0755))
 				discs[mf.Disc] = 3
 			}
 		}
@@ -449,7 +535,7 @@ func (a *album) Job(dir string, fun jobFun) {
 	for _, mf := range a.Tracks {
 		sub := ""
 		if mf.Disc != 0 {
-			sub = fmt.Sprintf("disc_%02d",mf.Disc)
+			sub = fmt.Sprintf("disc_%02d", mf.Disc)
 		}
 		cbn := cleanFilename(mf.Basename)
 		in := path.Join(*output_dir, "wav", sub, cbn+".wav")
@@ -461,50 +547,44 @@ func (a *album) Job(dir string, fun jobFun) {
 	close(cmds)
 
 	if *cover_image != "" {
-		f, err := zm.Get(*cover_image)
+		err := zm.CopyTo(*cover_image, path.Join(working_dir, "folder.jpg"))
 		if err != nil {
 			log.Print(err)
-		} else {
-			g, err := os.Create(path.Join(working_dir, "folder.jpg"))
-			croak(err)
-			_, err = io.Copy(g, f)
-			croak(err)
 		}
 	}
 
 	if *inlay_image != "" {
-		f, err := zm.Get(*inlay_image)
+		err := zm.CopyTo(*inlay_image, path.Join(working_dir, "inlay.jpg"))
 		if err != nil {
 			log.Print(err)
-		} else {
-			g, err := os.Create(path.Join(working_dir, "inlay.jpg"))
-			croak(err)
-			_, err = io.Copy(g, f)
-			croak(err)
 		}
 	}
 
 	if *cuesheet != "" {
-		f, err := zm.Get(*cuesheet)
-		if err != nil {
-			log.Print(err)
-		} else {
-			g, err := os.Create(path.Join(working_dir, "cuesheet.cue"))
-			croak(err)
-			_, err = io.Copy(g, f)
-			croak(err)
+		for _, d := range a.Discs {
+			sd, dd := "", ""
+			if d != 0 {
+				sd = fmt.Sprintf("disc_%02d", d)
+				dd = fmt.Sprintf("disc_%02d", d)
+			}
+			err := zm.CopyTo(path.Join(sd, *cuesheet), path.Join(working_dir, dd, "cuesheet.cue"))
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 
 	if *eac_logfile != "" {
-		f, err := zm.Get(*eac_logfile)
-		if err != nil {
-			log.Print(err)
-		} else {
-			g, err := os.Create(path.Join(working_dir, "eac.log"))
-			croak(err)
-			_, err = io.Copy(g, f)
-			croak(err)
+		for _, d := range a.Discs {
+			sd, dd := "", ""
+			if d != 0 {
+				sd = fmt.Sprintf("disc_%02d", d)
+				dd = fmt.Sprintf("disc_%02d", d)
+			}
+			err := zm.CopyTo(path.Join(sd, *eac_logfile), path.Join(working_dir, dd, "eac.log"))
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 
