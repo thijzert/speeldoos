@@ -34,15 +34,25 @@ type Performer struct {
 	Role string `xml:"role,attr"`
 }
 
+type SourceFile struct {
+	Filename string `xml:",chardata"`
+	Disc int `xml:"role,attr,omitempty"`
+}
+
+func (s SourceFile) String() string {
+	return s.Filename
+}
+
 type Performance struct {
 	Work        Work
-	Year        int         `xml:",omitempty"`
-	Performers  []Performer `xml:"Performers>Performer"`
-	SourceFiles []string    `xml:"SourceFiles>File"`
+	Year        int          `xml:",omitempty"`
+	Performers  []Performer  `xml:"Performers>Performer"`
+	SourceFiles []SourceFile `xml:"SourceFiles>File"`
 }
 
 type Carrier struct {
 	Name         string
+	ID           string        `xml:"id,attr,omitempty"`
 	Hash         string        `xml:"hash,attr"`
 	Performances []Performance `xml:"Performances>Performance"`
 }

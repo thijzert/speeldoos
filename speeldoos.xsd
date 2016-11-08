@@ -13,7 +13,8 @@
 	<xs:element name="Carrier" type="CarrierExtended"/>
 	<xs:complexType name="CarrierExtended">
 		<xs:sequence>
-			<xs:element name="Name" type="xs:string"/>
+			<xs:element name="Name" type="xs:string" minOccurs="0" maxOccurs="1"/>
+			<xs:element name="ID" type="xs:string" minOccurs="0" maxOccurs="1"/>
 			<xs:element name="Performances">
 				<xs:complexType>
 					<xs:sequence>
@@ -59,7 +60,15 @@
 			<xs:element name="SourceFiles">
 				<xs:complexType>
 					<xs:sequence>
-						<xs:element maxOccurs="unbounded" name="File" type="xs:string"/>
+						<xs:element maxOccurs="unbounded" name="File">
+							<xs:complexType>
+								<xs:simpleContent>
+									<xs:extension base="xs:string">
+										<xs:attribute name="disc" type="xs:integer" />
+									</xs:extension>
+								</xs:simpleContent>
+							</xs:complexType>
+						</xs:element>
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>

@@ -63,7 +63,7 @@ func main() {
 		cmd.Start()
 
 		for i, fn := range pf.SourceFiles {
-			f, err := zm.Get(fn)
+			f, err := zm.Get(fn.Filename)
 			if err != nil {
 				log.Fatal(err)
 			}

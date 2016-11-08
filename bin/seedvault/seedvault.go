@@ -132,7 +132,8 @@ func main() {
 			continue
 		}
 
-		for i, fn := range pf.SourceFiles {
+		for i, sf := range pf.SourceFiles {
+			fn := sf.Filename
 			track_counter++
 			fileTitle := title
 			if len(pf.Work.Parts) > 1 && len(pf.Work.Parts) > i {
