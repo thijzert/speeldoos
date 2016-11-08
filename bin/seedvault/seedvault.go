@@ -244,7 +244,7 @@ func main() {
 		}
 		archive_name = cleanFilename(archive_name)
 		archive_name = strings.Replace(archive_name, " ", "-", -1)
-		c := exec.Command("zip", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
+		c := exec.Command("zip", "--quiet", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
 		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]")
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
