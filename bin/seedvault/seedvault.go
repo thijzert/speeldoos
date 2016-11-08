@@ -104,6 +104,7 @@ func main() {
 	}
 
 	track_counter := 0
+	current_disc := 0
 
 	log.Printf("Initiating .flac run...")
 
@@ -139,6 +140,12 @@ func main() {
 		for i, sf := range pf.SourceFiles {
 			fn := sf.Filename
 			track_counter++
+
+			if sf.Disc != current_disc {
+				track_counter = 1
+				current_disc = sf.Disc
+			}
+
 			fileTitle := title
 			if len(pf.Work.Parts) > 1 && len(pf.Work.Parts) > i {
 				fileTitle = fmt.Sprintf("%s - %d. %s", title, i+1, pf.Work.Parts[i])
@@ -152,6 +159,7 @@ func main() {
 				Composer: pf.Work.Composer.Name,
 				Year:     pf.Year,
 				Track:    track_counter,
+				Disc:     sf.Disc,
 			}
 
 			for _, p := range pf.Performers {
@@ -170,7 +178,15 @@ func main() {
 
 			albus.Add(mm)
 
-			out = path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]", cleanFilename(out)+".flac")
+			sub := ""
+			if sf.Disc != 0 {
+				sub = fmt.Sprintf("disc_%02d",sf.Disc)
+				croak(os.MkdirAll(path.Join(*output_dir, "wav", sub), 0755))
+			}
+			dir := path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]", sub)
+			croak(os.MkdirAll(dir, 0755))
+
+			out = path.Join(dir, cleanFilename(out)+".flac")
 
 			f, err := os.Create(out)
 			croak(err)
@@ -192,6 +208,9 @@ func main() {
 			writeFlacTag(pipeIn, "title", mm.Title)
 			writeFlacTag(pipeIn, "artist", mm.Artist)
 			writeFlacTag(pipeIn, "album", mm.Album)
+			if mm.Disc != 0 {
+				writeFlacTag(pipeIn, "discnumber", fmt.Sprintf("%d", mm.Disc))
+			}
 			writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
 			writeFlacTag(pipeIn, "composer", mm.Composer)
 			for _, p := range pf.Performers {
@@ -207,7 +226,7 @@ func main() {
 
 	if *do_v2 || *do_v0 || *do_320 {
 		log.Printf("Decoding to WAV...")
-		croak(os.Mkdir(path.Join(*output_dir, "wav"), 0755))
+		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
 		albus.Job("FLAC", func(mf *mFile, out, in string) []*exec.Cmd {
 			// HACK: Decoding is achieved by working in the flac/ dir and swapping the input and output parameters
 			return []*exec.Cmd{exec.Command("flac", "-d", "-s", "-o", out, in+".flac")}
@@ -347,7 +366,9 @@ func cleanFilename(value string) string {
 	value = strings.Replace(value, "\"", "", -1)
 	value = strings.Replace(value, ":", "", -1)
 	value = strings.Replace(value, "?", "", -1)
+	value = strings.Replace(value, "!", "", -1)
 	value = strings.Replace(value, "/", "-", -1)
+	value = strings.Replace(value, "\\", "-", -1)
 
 	return value
 }
@@ -373,7 +394,7 @@ type mFile struct {
 	Basename                                string
 	Title, Artist, Album                    string
 	Composer, Soloist, Orchestra, Conductor string
-	Year, Track                             int
+	Year, Disc, Track                       int
 }
 
 type album struct {
@@ -396,6 +417,17 @@ func (a *album) Job(dir string, fun jobFun) {
 	working_dir := path.Join(*output_dir, cleanFilename(a.Name)+" ["+dir+"]")
 	croak(os.MkdirAll(working_dir, 0755))
 
+	discs := make(map[int]int)
+	for _, mf := range a.Tracks {
+		if mf.Disc != 0 {
+			found, _ := discs[mf.Disc]
+			if found != 3 {
+				croak(os.MkdirAll(path.Join(working_dir,fmt.Sprintf("disc_%02d",mf.Disc)), 0755))
+				discs[mf.Disc] = 3
+			}
+		}
+	}
+
 	cmds := make(chan []*exec.Cmd)
 	var wg sync.WaitGroup
 
@@ -415,8 +447,13 @@ func (a *album) Job(dir string, fun jobFun) {
 	}
 
 	for _, mf := range a.Tracks {
-		in := path.Join(*output_dir, "wav", mf.Basename+".wav")
-		out := path.Join(working_dir, cleanFilename(mf.Basename))
+		sub := ""
+		if mf.Disc != 0 {
+			sub = fmt.Sprintf("disc_%02d",mf.Disc)
+		}
+		cbn := cleanFilename(mf.Basename)
+		in := path.Join(*output_dir, "wav", sub, cbn+".wav")
+		out := path.Join(working_dir, sub, cbn)
 
 		cmds <- fun(mf, in, out)
 	}
