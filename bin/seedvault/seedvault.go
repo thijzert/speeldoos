@@ -26,6 +26,7 @@ var (
 
 	cover_image = flag.String("cover_image", "", "Path to cover image")
 	inlay_image = flag.String("inlay_image", "", "Path to inlay image")
+	booklet     = flag.String("booklet", "", "Path to booklet PDF")
 	eac_logfile = flag.String("eac_logfile", "", "Path to EAC log file")
 	cuesheet    = flag.String("cuesheet", "", "Path to cuesheet")
 
@@ -37,6 +38,7 @@ var (
 	do_320     = flag.Bool("320", false, "Also encode MP3-320")
 	do_v0      = flag.Bool("v0", false, "Also encode V0")
 	do_v2      = flag.Bool("v2", false, "Also encode V2")
+	do_v6      = flag.Bool("v6", false, "Also encode V6 (for audiobooks)")
 
 	conc_jobs = flag.Int("j", 2, "Number of concurrent jobs")
 )
@@ -72,6 +74,7 @@ func confirmSettings() *speeldoos.Carrier {
 
 	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(*cover_image), *cover_image)
 	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(*inlay_image), *inlay_image)
+	fmt.Printf("Booklet file: %s %s\n", checkFileExists(*booklet), *booklet)
 
 	if len(discs) > 1 {
 		fmt.Printf("Discs:       ")
@@ -130,6 +133,9 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 	if *inlay_image != "" && !fileExists(*inlay_image) {
 		*inlay_image = ""
+	}
+	if *booklet != "" && !fileExists(*booklet) {
+		*booklet = ""
 	}
 
 	return carrier
@@ -555,6 +561,13 @@ func (a *album) Job(dir string, fun jobFun) {
 
 	if *inlay_image != "" {
 		err := zm.CopyTo(*inlay_image, path.Join(working_dir, "inlay.jpg"))
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
+	if *booklet != "" {
+		err := zm.CopyTo(*booklet, path.Join(working_dir, "booklet.pdf"))
 		if err != nil {
 			log.Print(err)
 		}
