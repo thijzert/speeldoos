@@ -29,6 +29,8 @@ var (
 	eac_logfile = flag.String("eac_logfile", "", "Path to EAC log file")
 	cuesheet    = flag.String("cuesheet", "", "Path to cuesheet")
 
+	name_after_composer = flag.Bool("name_after_composer", false, "Name the album after the first composer rather than the first performer")
+
 	tracker_url = flag.String("tracker", "", "URL to private tracker")
 
 	do_archive = flag.Bool("archive", true, "Create a speeldoos archive")
@@ -167,10 +169,16 @@ func main() {
 
 	albus := newAlbum(foo.Name)
 	for _, pf := range foo.Performances {
-		for _, p := range pf.Performers {
-			if p.Name != "" {
-				albus.Name = p.Name + " - " + foo.Name
-				break
+		if *name_after_composer {
+			if pf.Work.Composer.Name != "" {
+				albus.Name = pf.Work.Composer.Name + " - " + foo.Name
+			}
+		} else {
+			for _, p := range pf.Performers {
+				if p.Name != "" {
+					albus.Name = p.Name + " - " + foo.Name
+					break
+				}
 			}
 		}
 		if albus.Name != foo.Name {
