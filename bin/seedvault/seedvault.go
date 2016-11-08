@@ -256,15 +256,7 @@ func main() {
 
 			out = path.Join(dir, cleanFilename(out)+".flac")
 
-			f, err := os.Create(out)
-			croak(err)
-			g, err := zm.Get(fn)
-			croak(err)
-
-			_, err = io.Copy(f, g)
-			croak(err)
-			f.Close()
-			g.Close()
+			croak(zm.CopyTo(fn, out))
 
 			cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", out)
 			cmd.Stdout = os.Stdout
