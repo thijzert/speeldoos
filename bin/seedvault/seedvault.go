@@ -3,6 +3,8 @@ package main
 import (
 	"archive/zip"
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"github.com/thijzert/go-rcfile"
@@ -250,9 +252,15 @@ func main() {
 		croak(c.Wait())
 
 		bar, err := speeldoos.ImportCarrier(*input_xml)
-		if err != nil {
-			log.Fatal(err)
-		}
+		croak(err)
+
+		h := sha256.New()
+		f, err := os.Open(path.Join(*output_dir, archive_name+".zip"))
+		croak(err)
+		_, err = io.Copy(h, f)
+		croak(err)
+
+		bar.Hash = "sha256-" + hex.EncodeToString(h.Sum(nil))
 
 		sourcefile_counter := 0
 		for i, pf := range bar.Performances {

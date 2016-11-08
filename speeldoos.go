@@ -31,7 +31,7 @@ type Work struct {
 
 type Performer struct {
 	Name string `xml:",chardata"`
-	Role string `xml:"role,attr"`
+	Role string `xml:"role,attr,omitempty"`
 }
 
 type SourceFile struct {
@@ -51,6 +51,7 @@ type Performance struct {
 }
 
 type Carrier struct {
+	XMLName      xml.Name `xml:"https://www.inurbanus.nl/NS/speeldoos/1.0 Carrier"`
 	Name         string
 	ID           string        `xml:",omitempty"`
 	Hash         string        `xml:"hash,attr"`
@@ -80,7 +81,7 @@ func (c *Carrier) Write(filename string) error {
 	defer op.Close()
 
 	w := xml.NewEncoder(op)
-	w.Indent("", "   ")
+	w.Indent("", "	")
 	err = w.Encode(c)
 	if err != nil {
 		return err
