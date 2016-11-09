@@ -121,6 +121,9 @@ func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("                MP3-320 %s\n", yes(*do_320))
 	fmt.Printf("                MP3-V0  %s\n", yes(*do_v0))
 	fmt.Printf("                MP3-V2  %s\n", yes(*do_v2))
+	if *do_v6 {
+		fmt.Printf("                MP3-V6  %s\n", yes(*do_v6))
+	}
 	fmt.Printf("                archive %s\n", yes(*do_archive))
 	fmt.Printf("Number of concurrent encoding processes:  %d\n", *conc_jobs)
 
@@ -310,6 +313,12 @@ func main() {
 		albus.Job("FLAC", func(_ *mFile, _, _ string) []*exec.Cmd {
 			return []*exec.Cmd{exec.Command("true")}
 		})
+	}
+
+	if *do_v6 {
+		log.Printf("Encoding V6 profile...")
+		albus.Job("V6", lameRun("-V6", "--vbr-new"))
+		log.Printf("Done encoding.")
 	}
 
 	if *do_v2 {
