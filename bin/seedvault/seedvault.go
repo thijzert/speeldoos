@@ -252,12 +252,24 @@ func main() {
 					mm.Artist = p.Name
 				}
 
-				if (p.Role == "soloist" || p.Role == "performer") && mm.Soloist == "" {
-					mm.Soloist = p.Name
-				} else if (p.Role == "orchestra" || p.Role == "ensemble") && mm.Orchestra == "" {
-					mm.Orchestra = p.Name
-				} else if p.Role == "conductor" && mm.Conductor == "" {
-					mm.Conductor = p.Name
+				if (p.Role == "soloist" || p.Role == "performer" || p.Role == "") {
+					if mm.Soloist == "" {
+						mm.Soloist = p.Name
+					} else {
+						mm.Soloist = mm.Soloist + "/" + p.Name
+					}
+				} else if (p.Role == "orchestra" || p.Role == "ensemble") {
+					if mm.Orchestra == "" {
+						mm.Orchestra = p.Name
+					} else {
+						mm.Orchestra = mm.Orchestra + "/" + p.Name
+					}
+				} else if p.Role == "conductor" {
+					if mm.Conductor == "" {
+						mm.Conductor = p.Name
+					} else {
+						mm.Conductor = mm.Conductor + "/" + p.Name
+					}
 				}
 			}
 
