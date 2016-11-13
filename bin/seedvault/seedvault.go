@@ -378,8 +378,12 @@ func main() {
 
 		sourcefile_counter := 0
 		for i, pf := range bar.Performances {
-			for j, _ := range pf.SourceFiles {
-				bar.Performances[i].SourceFiles[j].Filename = path.Join(archive_name+".zip", cleanFilename(albus.Tracks[sourcefile_counter].Basename)+".flac")
+			for j, sf := range pf.SourceFiles {
+				disc := ""
+				if sf.Disc != 0 {
+					disc = fmt.Sprintf("disc_%02d", sf.Disc)
+				}
+				bar.Performances[i].SourceFiles[j].Filename = path.Join(archive_name+".zip", disc, cleanFilename(albus.Tracks[sourcefile_counter].Basename)+".flac")
 				sourcefile_counter++
 			}
 		}
