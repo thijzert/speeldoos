@@ -16,7 +16,7 @@ var (
 	output_file = flag.String("output_file", "", "Output XML file")
 
 	track_format = flag.String("track_format", "track_%02d.flac", "Filename format of the track number")
-	disc_format = flag.String("disc_format", "disc_%02d", "Directory name format of the disc number")
+	disc_format  = flag.String("disc_format", "disc_%02d", "Directory name format of the disc number")
 
 	composer = flag.String("composer", "2222", "Preset the composer of each work")
 	year     = flag.Int("year", 2222, "Preset the year of each performance")
@@ -52,7 +52,7 @@ func main() {
 		total_tracks += n
 	}
 
-	discsize := []int{ total_tracks }
+	discsize := []int{total_tracks}
 	if *discs != "" {
 		discsize = discsize[0:0]
 		d_total := 0
@@ -80,6 +80,7 @@ func main() {
 
 	foo.Name = "2222"
 	foo.ID = "2222"
+	foo.Source = "2222"
 	foo.Performances = make([]speeldoos.Performance, 0, len(args))
 
 	disc_index := 0
@@ -124,8 +125,8 @@ func main() {
 			}
 			if len(discsize) > 1 {
 				pf.SourceFiles[j] = speeldoos.SourceFile{
-					Filename: path.Join(fmt.Sprintf(*disc_format, disc_index + 1), fmt.Sprintf(*track_format, track_counter)),
-					Disc: disc_index + 1,
+					Filename: path.Join(fmt.Sprintf(*disc_format, disc_index+1), fmt.Sprintf(*track_format, track_counter)),
+					Disc:     disc_index + 1,
 				}
 			} else {
 				pf.SourceFiles[j] = speeldoos.SourceFile{

@@ -194,6 +194,9 @@ func main() {
 			break
 		}
 	}
+	if foo.Source != "" {
+		albus.Name = albus.Name + fmt.Sprintf(" [%s]", foo.Source)
+	}
 
 	discs := make(map[int]int)
 	for _, pf := range foo.Performances {
@@ -252,13 +255,13 @@ func main() {
 					mm.Artist = p.Name
 				}
 
-				if (p.Role == "soloist" || p.Role == "performer" || p.Role == "") {
+				if p.Role == "soloist" || p.Role == "performer" || p.Role == "" {
 					if mm.Soloist == "" {
 						mm.Soloist = p.Name
 					} else {
 						mm.Soloist = mm.Soloist + "/" + p.Name
 					}
-				} else if (p.Role == "orchestra" || p.Role == "ensemble") {
+				} else if p.Role == "orchestra" || p.Role == "ensemble" {
 					if mm.Orchestra == "" {
 						mm.Orchestra = p.Name
 					} else {

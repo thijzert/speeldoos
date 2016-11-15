@@ -54,7 +54,8 @@ type Carrier struct {
 	XMLName      xml.Name `xml:"https://www.inurbanus.nl/NS/speeldoos/1.0 Carrier"`
 	Name         string
 	ID           string        `xml:",omitempty"`
-	Hash         string        `xml:"hash,attr"`
+	Hash         string        `xml:"hash,attr,omitempty"`
+	Source       string        `xml:"source,attr,omitempty"`
 	Performances []Performance `xml:"Performances>Performance"`
 }
 
