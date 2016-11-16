@@ -218,6 +218,10 @@ func main() {
 			title = pf.Work.Title[0].Title
 		}
 
+		if pf.Work.OpusNumber != nil && len(pf.Work.OpusNumber) > 0 {
+			title = title + ", " + pf.Work.OpusNumber[0].String()
+		}
+
 		log.Printf("Now processing: %s - %s", pf.Work.Composer.Name, title)
 
 		if len(pf.SourceFiles) == 0 {

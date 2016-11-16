@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"io/ioutil"
 	"os"
+	"fmt"
 )
 
 type Composer struct {
@@ -14,6 +15,17 @@ type Composer struct {
 type OpusNumber struct {
 	Number    string `xml:",chardata"`
 	IndexName string `xml:",attr,omitempty"`
+}
+
+func (o OpusNumber) String() string {
+	if o.Number == "" {
+		return ""
+	}
+	if o.IndexName == "" {
+		return fmt.Sprintf("Op. %s", o.Number)
+	} else {
+		return fmt.Sprintf("%s %s", o.IndexName, o.Number)
+	}
 }
 
 type Title struct {
