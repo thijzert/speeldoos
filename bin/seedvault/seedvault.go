@@ -76,6 +76,8 @@ func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(*inlay_image), *inlay_image)
 	fmt.Printf("Booklet file: %s %s\n", checkFileExists(*booklet), *booklet)
 
+	logfile_exists, cuesheet_exists := true, true
+
 	if len(discs) > 1 {
 		fmt.Printf("Discs:       ")
 		for d, _ := range discs {
@@ -93,6 +95,9 @@ func confirmSettings() *speeldoos.Carrier {
 					sub = fmt.Sprintf("disc_%02d", d)
 				}
 				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *eac_logfile)))
+				if !fileExists(path.Join(sub, *eac_logfile)) {
+					logfile_exists = false
+				}
 			}
 			fmt.Printf("%s\n", *eac_logfile)
 		}
@@ -107,15 +112,23 @@ func confirmSettings() *speeldoos.Carrier {
 					sub = fmt.Sprintf("disc_%02d", d)
 				}
 				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *cuesheet)))
+				if !fileExists(path.Join(sub, *cuesheet)) {
+					cuesheet_exists = false
+				}
 			}
 			fmt.Printf("%s\n", *cuesheet)
 		}
 	} else {
 		fmt.Printf("EAC log file: %s %s\n", checkFileExists(*eac_logfile), *eac_logfile)
 		fmt.Printf("Cue sheet:    %s %s\n", checkFileExists(*cuesheet), *cuesheet)
+
+		logfile_exists = fileExists(*eac_logfile)
+		cuesheet_exists = fileExists(*cuesheet)
 	}
 
-	fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(*tracker_url))
+	if *tracker_url != "" {
+		fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(*tracker_url))
+	}
 
 	fmt.Printf("\nEncodes to run: FLAC    %s\n", yes(true))
 	fmt.Printf("                MP3-320 %s\n", yes(*do_320))
@@ -139,6 +152,15 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 	if *booklet != "" && !fileExists(*booklet) {
 		*booklet = ""
+	}
+
+	if carrier.Source == "WEB" {
+		if *eac_logfile != "" && !logfile_exists {
+			*eac_logfile = ""
+		}
+		if *cuesheet != "" && !cuesheet_exists {
+			*cuesheet = ""
+		}
 	}
 
 	return carrier
