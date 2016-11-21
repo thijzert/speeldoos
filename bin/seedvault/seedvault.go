@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/zip"
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,12 +9,12 @@ import (
 	"github.com/thijzert/go-rcfile"
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/zipmap"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -43,7 +42,7 @@ var (
 	conc_jobs = flag.Int("j", 2, "Number of concurrent jobs")
 )
 
-var zm = &ZipMap{}
+var zm = zipmap.New()
 
 func init() {
 	rcfile.Parse()
@@ -419,81 +418,6 @@ func main() {
 
 		bar.Write(path.Join(*output_dir, archive_name+".xml"))
 	}
-}
-
-type ZipMap struct {
-	zips map[string]*zip.ReadCloser
-}
-
-func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
-	rv, _ := os.Open(os.DevNull)
-
-	if z.zips == nil {
-		z.zips = make(map[string]*zip.ReadCloser)
-	}
-
-	var err error
-
-	// Try opening the file itself, maybe that works...
-	fi, err := os.Stat(filename)
-	if err == nil {
-		// Is it a regular file?
-		if (fi.Mode() & os.ModeType) == 0 {
-			return os.Open(filename)
-		}
-	}
-
-	// FIXME: I'm of the opinion that this should work: elems := filepath.SplitList(filename)
-	elems := strings.Split(filename, "/")
-	for i, elem := range elems {
-		if len(elem) < 5 || elem[len(elem)-4:] != ".zip" {
-			continue
-		}
-		zipfile := filepath.Join(elems[0 : i+1]...)
-		read, ok := z.zips[zipfile]
-		if !ok {
-			log.Printf("Opening zip file %s...\n", zipfile)
-			read, err = zip.OpenReader(zipfile)
-			if err != nil {
-				log.Print(err)
-				read = nil
-			}
-			z.zips[zipfile] = read
-		}
-
-		if read == nil {
-			continue
-		}
-
-		localfile := filepath.Join(elems[i+1:]...)
-
-		for _, zfp := range read.File {
-			if zfp.Name == localfile {
-				return zfp.Open()
-			}
-		}
-
-		return rv, os.ErrNotExist
-	}
-
-	return rv, os.ErrNotExist
-}
-
-func (z *ZipMap) CopyTo(filename, destination string) error {
-	f, err := zm.Get(filename)
-	defer f.Close()
-
-	if err != nil {
-		return err
-	} else {
-		g, err := os.Create(destination)
-		defer g.Close()
-		croak(err)
-
-		_, err = io.Copy(g, f)
-		croak(err)
-	}
-	return nil
 }
 
 func croak(e error) {
