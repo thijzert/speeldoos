@@ -94,7 +94,7 @@ func confirmSettings() *speeldoos.Carrier {
 					sub = fmt.Sprintf("disc_%02d", d)
 				}
 				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *eac_logfile)))
-				if !fileExists(path.Join(sub, *eac_logfile)) {
+				if !zm.Exists(path.Join(sub, *eac_logfile)) {
 					logfile_exists = false
 				}
 			}
@@ -111,7 +111,7 @@ func confirmSettings() *speeldoos.Carrier {
 					sub = fmt.Sprintf("disc_%02d", d)
 				}
 				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *cuesheet)))
-				if !fileExists(path.Join(sub, *cuesheet)) {
+				if !zm.Exists(path.Join(sub, *cuesheet)) {
 					cuesheet_exists = false
 				}
 			}
@@ -121,8 +121,8 @@ func confirmSettings() *speeldoos.Carrier {
 		fmt.Printf("EAC log file: %s %s\n", checkFileExists(*eac_logfile), *eac_logfile)
 		fmt.Printf("Cue sheet:    %s %s\n", checkFileExists(*cuesheet), *cuesheet)
 
-		logfile_exists = fileExists(*eac_logfile)
-		cuesheet_exists = fileExists(*cuesheet)
+		logfile_exists = zm.Exists(*eac_logfile)
+		cuesheet_exists = zm.Exists(*cuesheet)
 	}
 
 	if *tracker_url != "" {
@@ -143,13 +143,13 @@ func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("Otherwise, hit Ctrl+C to cancel the process.\n")
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
-	if *cover_image != "" && !fileExists(*cover_image) {
+	if *cover_image != "" && !zm.Exists(*cover_image) {
 		*cover_image = ""
 	}
-	if *inlay_image != "" && !fileExists(*inlay_image) {
+	if *inlay_image != "" && !zm.Exists(*inlay_image) {
 		*inlay_image = ""
 	}
-	if *booklet != "" && !fileExists(*booklet) {
+	if *booklet != "" && !zm.Exists(*booklet) {
 		*booklet = ""
 	}
 
@@ -170,16 +170,11 @@ func checkFileExists(filename string) string {
 		return tc.Bblack("(not specified)")
 	}
 
-	if fileExists(filename) {
+	if zm.Exists(filename) {
 		return tc.Green("\u2713")
 	}
 
 	return tc.Red("not found")
-}
-
-func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	return err == nil
 }
 
 func yes(i bool) string {

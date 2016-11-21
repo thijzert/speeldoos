@@ -17,8 +17,9 @@
 		io.Copy(os.Stdout, f)
 
 	A Zipmap will cache open file pointers to zip archives it's encountered.
-	If you call `Get`, zipmap expects you to read the file in full before
-	calling `Get` again. This library is not thread-safe in any way.
+	If you call `Get`, zipmap expects you to call Close() on the resulting
+	ReadCloser before calling `Get` again.
+	This library is not thread-safe in any way.
 */
 
 package zipmap
@@ -40,6 +41,15 @@ func New() *ZipMap {
 	rv := &ZipMap{}
 	rv.zips = make(map[string]*zip.ReadCloser)
 	return rv
+}
+
+func (z *ZipMap) Exists(filename string) bool {
+	f, err := z.Get(filename)
+	if err == nil {
+		f.Close()
+		return true
+	}
+	return false
 }
 
 func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
