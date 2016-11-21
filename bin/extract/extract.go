@@ -1,16 +1,14 @@
 package main
 
 import (
-	"archive/zip"
 	"flag"
 	"fmt"
 	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/zipmap"
 	"io"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 var (
@@ -28,7 +26,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	zm := &ZipMap{}
+	zm := zipmap.New()
 
 	for _, pf := range foo.Performances {
 		title := "(no title)"
@@ -88,51 +86,4 @@ func main() {
 		}
 	}
 	log.Printf("Finished processing\n")
-}
-
-type ZipMap struct {
-	zips map[string]*zip.ReadCloser
-}
-
-func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
-	rv, _ := os.Open(os.DevNull)
-
-	if z.zips == nil {
-		z.zips = make(map[string]*zip.ReadCloser)
-	}
-
-	// FIXME: I'm of the opinion that this should work: elems := filepath.SplitList(filename)
-	elems := strings.Split(filename, "/")
-	for i, elem := range elems {
-		if len(elem) < 5 || elem[len(elem)-4:] != ".zip" {
-			continue
-		}
-		zipfile := filepath.Join(elems[0 : i+1]...)
-		read, ok := z.zips[zipfile]
-		if !ok {
-			log.Printf("Opening zip file %s...\n", zipfile)
-			var err error
-			read, err = zip.OpenReader(zipfile)
-			if err != nil {
-				log.Print(err)
-				read = nil
-			}
-			z.zips[zipfile] = read
-		}
-
-		if read == nil {
-			continue
-		}
-
-		localfile := filepath.Join(elems[i+1:]...)
-
-		for _, zfp := range read.File {
-			if zfp.Name == localfile {
-				return zfp.Open()
-			}
-		}
-
-		return rv, os.ErrNotExist
-	}
-	return rv, os.ErrNotExist
 }
