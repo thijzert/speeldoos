@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
@@ -261,16 +262,19 @@ func main() {
 			out := fmt.Sprintf("%02d - %s - %s", track_counter, pf.Work.Composer.Name, fileTitle)
 
 			mm := &mFile{
-				Basename: out,
-				Title:    fileTitle,
-				Album:    foo.Name,
-				Composer: pf.Work.Composer.Name,
-				Year:     pf.Year,
-				Track:    track_counter,
-				Disc:     sf.Disc,
+				Basename:   out,
+				Title:      fileTitle,
+				Album:      foo.Name,
+				Composer:   pf.Work.Composer.Name,
+				Performers: make([]string, 0, 2),
+				Year:       pf.Year,
+				Track:      track_counter,
+				Disc:       sf.Disc,
 			}
 
 			for _, p := range pf.Performers {
+				mm.Performers = append(mm.Performers, p.Name)
+
 				if mm.Artist == "" {
 					mm.Artist = p.Name
 				}
@@ -309,29 +313,6 @@ func main() {
 			out = path.Join(dir, cleanFilename(out)+".flac")
 
 			croak(zm.CopyTo(fn, out))
-
-			cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", out)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			pipeIn, err := cmd.StdinPipe()
-			croak(err)
-			cmd.Start()
-
-			writeFlacTag(pipeIn, "title", mm.Title)
-			writeFlacTag(pipeIn, "artist", mm.Artist)
-			writeFlacTag(pipeIn, "album", mm.Album)
-			if mm.Disc != 0 {
-				writeFlacTag(pipeIn, "discnumber", fmt.Sprintf("%d", mm.Disc))
-			}
-			writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
-			writeFlacTag(pipeIn, "composer", mm.Composer)
-			for _, p := range pf.Performers {
-				writeFlacTag(pipeIn, "performer", p.Name)
-			}
-			writeFlacTag(pipeIn, "date", fmt.Sprintf("%d", mm.Year))
-			writeFlacTag(pipeIn, "genre", "classical") // FIXME
-			pipeIn.Close()
-			croak(cmd.Wait())
 		}
 	}
 	log.Printf("FLAC run complete")
@@ -339,14 +320,19 @@ func main() {
 	if *do_v2 || *do_v0 || *do_320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
-		albus.Job("FLAC", func(mf *mFile, out, in string) []*exec.Cmd {
-			// HACK: Decoding is achieved by working in the flac/ dir and swapping the input and output parameters
-			return []*exec.Cmd{exec.Command("flac", "-d", "-s", "-o", out, in+".flac")}
+		albus.Job("FLAC", func(mf *mFile, in, out string) []*exec.Cmd {
+			// HACK: For decoding, technically the input and output files are reversed. But I won't tell if you don't.
+			return []*exec.Cmd{
+				exec.Command("flac", "-d", "-s", "-o", in, out+".flac"),
+				metaflac(mf, in, out),
+			}
 		})
 		log.Printf("Done decoding.")
 	} else {
-		albus.Job("FLAC", func(_ *mFile, _, _ string) []*exec.Cmd {
-			return []*exec.Cmd{exec.Command("true")}
+		albus.Job("FLAC", func(mf *mFile, in, out string) []*exec.Cmd {
+			return []*exec.Cmd{
+				metaflac(mf, in, out),
+			}
 		})
 	}
 
@@ -458,6 +444,7 @@ type mFile struct {
 	Basename                                string
 	Title, Artist, Album                    string
 	Composer, Soloist, Orchestra, Conductor string
+	Performers                              []string
 	Year, Disc, Track                       int
 }
 
@@ -614,7 +601,7 @@ func id3tags(s *mFile, in, out string) *exec.Cmd {
 		"-t", s.Title,
 		"-a", s.Artist,
 		"--TCOM", s.Composer,
-		"--genre", "32",
+		"--genre", "32", // FIXME
 	}
 	if s.Album != "" {
 		args = append(args, "-A", s.Album)
@@ -640,4 +627,37 @@ func id3tags(s *mFile, in, out string) *exec.Cmd {
 	args = append(args, out+".mp3")
 
 	return exec.Command("id3v2", args...)
+}
+
+func metaflac(mm *mFile, in, out string) *exec.Cmd {
+	cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", out+".flac")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cecinestpas, err := cmd.StdinPipe()
+	croak(err)
+
+	pipeIn := &bytes.Buffer{}
+
+	writeFlacTag(pipeIn, "title", mm.Title)
+	writeFlacTag(pipeIn, "artist", mm.Artist)
+	writeFlacTag(pipeIn, "album", mm.Album)
+	if mm.Disc != 0 {
+		writeFlacTag(pipeIn, "discnumber", fmt.Sprintf("%d", mm.Disc))
+	}
+	writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
+	writeFlacTag(pipeIn, "composer", mm.Composer)
+	if mm.Conductor != "" {
+		writeFlacTag(pipeIn, "conductor", mm.Conductor)
+	}
+	for _, p := range mm.Performers {
+		writeFlacTag(pipeIn, "performer", p)
+	}
+	writeFlacTag(pipeIn, "date", fmt.Sprintf("%d", mm.Year))
+	writeFlacTag(pipeIn, "genre", "classical") // FIXME
+
+	go func() {
+		pipeIn.WriteTo(cecinestpas)
+		cecinestpas.Close()
+	}()
+	return cmd
 }
