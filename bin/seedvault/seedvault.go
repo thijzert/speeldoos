@@ -330,11 +330,9 @@ func main() {
 		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
 		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
 			flac := out + ".flac"
-			wav24 := wav[:len(wav)-4] + ".24bit.wav"
 			return []*exec.Cmd{
-				exec.Command("flac", "-d", "-s", "-o", wav24, flac),
+				exec.Command("flac", "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
-				exec.Command("sox", "-q", wav24, "-b", "16", "-r", "44.1k", wav),
 			}
 		})
 		log.Printf("Done decoding")
