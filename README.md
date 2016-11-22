@@ -13,7 +13,7 @@ Different parts of speeldoos will have different dependencies; install them as n
 
 On my machine I installed most of these using the following command: `sudo apt-get install flac lame mktorrent ffmpeg`, but your mileage may vary.
 
-Currently, the project only exists as a constellation of several small scripts. On mac or linux, try running:
+Currently, the project only exists as a constellation of several small scripts, though this is going to change eventually. On mac or linux, try running:
 
     go get -u github.com/thijzert/speeldoos
 
