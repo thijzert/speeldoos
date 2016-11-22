@@ -229,6 +229,9 @@ func main() {
 	croak(os.Mkdir(*output_dir, 0755))
 	croak(os.Mkdir(path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]"), 0755))
 
+	last_bps := 0
+	all_bps := &bitness{}
+
 	for _, pf := range foo.Performances {
 		title := "(no title)"
 		if len(pf.Work.Title) > 0 {
@@ -311,13 +314,17 @@ func main() {
 			croak(os.MkdirAll(dir, 0755))
 
 			out = path.Join(dir, cleanFilename(out)+".flac")
-
 			croak(zm.CopyTo(fn, out))
+
+			last_bps = all_bps.Check(out)
 		}
 	}
+	croak(all_bps.Consistent())
 	log.Printf("FLAC run complete")
 
-	if *do_v2 || *do_v0 || *do_320 {
+	if last_bps > 16 {
+		log.Fatalf("You appear to have a FLAC%d source. Congrats on that, but it isn't yet supported.", last_bps)
+	} else if *do_v2 || *do_v0 || *do_320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
 		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
@@ -406,6 +413,11 @@ func croak(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
+}
+
+func ncroak(n int, e error) int {
+	croak(e)
+	return n
 }
 
 func cleanFilename(value string) string {
@@ -662,4 +674,46 @@ func metaflac(mm *mFile, flac string) *exec.Cmd {
 		cecinestpas.Close()
 	}()
 	return cmd
+}
+
+type bitness struct {
+	seen map[int]int
+}
+
+func (b *bitness) Check(file string) int {
+	cmd := exec.Command("metaflac", "--show-bps", file)
+	cmd.Stderr = os.Stderr
+	cecinestpas, err := cmd.StdoutPipe()
+	croak(err)
+	croak(cmd.Start())
+	rv := 0
+	ncroak(fmt.Fscanln(cecinestpas, &rv))
+	croak(cmd.Wait())
+
+	if b.seen == nil {
+		b.seen = make(map[int]int)
+	}
+	if b.seen[rv] == 0 {
+		b.seen[rv] = 1
+	} else {
+		b.seen[rv] = b.seen[rv] + 1
+	}
+
+	return rv
+}
+
+func (b *bitness) Consistent() error {
+	if b.seen == nil || len(b.seen) == 0 {
+		return nil
+	}
+	if len(b.seen) == 1 {
+		return nil
+	}
+
+	rv := ""
+	for k, v := range b.seen {
+		rv = fmt.Sprintf("%s, %dx %dbit", rv, v, k)
+	}
+
+	return fmt.Errorf("Inconsistent bit depth across source files: I've seen %s", rv[2:])
 }
