@@ -323,7 +323,22 @@ func main() {
 	log.Printf("FLAC run complete")
 
 	if last_bps > 16 {
-		log.Fatalf("You appear to have a FLAC%d source. Congrats on that, but it isn't yet supported.", last_bps)
+		dir := path.Join(*output_dir, cleanFilename(albus.Name))
+		os.Rename(dir+" [FLAC]", dir+fmt.Sprintf(" [FLAC%d]", last_bps))
+
+		log.Printf("Decoding to 16-bit WAV...")
+		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
+		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
+			flac := out + ".flac"
+			wav24 := wav[:len(wav)-4] + ".24bit.wav"
+			return []*exec.Cmd{
+				exec.Command("flac", "-d", "-s", "-o", wav24, flac),
+				metaflac(mf, flac),
+				exec.Command("sox", "-q", wav24, "-b", "16", "-r", "44.1k", wav),
+			}
+		})
+		log.Printf("Done decoding")
+
 	} else if *do_v2 || *do_v0 || *do_320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
@@ -369,6 +384,10 @@ func main() {
 	}
 
 	if *do_archive {
+		source_dir := " [FLAC]"
+		if last_bps > 16 {
+			source_dir = fmt.Sprintf(" [FLAC%d]", last_bps)
+		}
 		archive_name := foo.ID
 		if archive_name == "" {
 			archive_name = "speeldoos"
@@ -376,7 +395,7 @@ func main() {
 		archive_name = cleanFilename(archive_name)
 		archive_name = strings.Replace(archive_name, " ", "-", -1)
 		c := exec.Command("zip", "--quiet", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
-		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]")
+		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+source_dir)
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		c.Start()

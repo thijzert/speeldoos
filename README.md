@@ -10,8 +10,9 @@ Different parts of speeldoos will have different dependencies; install them as n
 * LAME
 * mktorrent
 * ffmpeg
+* SoX
 
-On my machine I installed most of these using the following command: `sudo apt-get install flac lame mktorrent ffmpeg`, but your mileage may vary.
+On my machine I installed most of these using the following command: `sudo apt-get install flac lame mktorrent ffmpeg sox`, but your mileage may vary.
 
 Currently, the project only exists as a constellation of several small scripts. On mac or linux, try running:
 
