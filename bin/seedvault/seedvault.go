@@ -320,18 +320,19 @@ func main() {
 	if *do_v2 || *do_v0 || *do_320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
-		albus.Job("FLAC", func(mf *mFile, in, out string) []*exec.Cmd {
-			// HACK: For decoding, technically the input and output files are reversed. But I won't tell if you don't.
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+			flac := out + ".flac"
 			return []*exec.Cmd{
-				exec.Command("flac", "-d", "-s", "-o", in, out+".flac"),
-				metaflac(mf, in, out),
+				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+				metaflac(mf, flac),
 			}
 		})
 		log.Printf("Done decoding.")
 	} else {
-		albus.Job("FLAC", func(mf *mFile, in, out string) []*exec.Cmd {
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+			flac := out + ".flac"
 			return []*exec.Cmd{
-				metaflac(mf, in, out),
+				metaflac(mf, flac),
 			}
 		})
 	}
@@ -504,10 +505,10 @@ func (a *album) Job(dir string, fun jobFun) {
 			sub = fmt.Sprintf("disc_%02d", mf.Disc)
 		}
 		cbn := cleanFilename(mf.Basename)
-		in := path.Join(*output_dir, "wav", sub, cbn+".wav")
+		wav := path.Join(*output_dir, "wav", sub, cbn+".wav")
 		out := path.Join(working_dir, sub, cbn)
 
-		cmds <- fun(mf, in, out)
+		cmds <- fun(mf, wav, out)
 	}
 
 	close(cmds)
@@ -583,20 +584,21 @@ func (a *album) Job(dir string, fun jobFun) {
 }
 
 func lameRun(extraArgs ...string) jobFun {
-	return func(s *mFile, in, out string) []*exec.Cmd {
+	return func(s *mFile, wav, out string) []*exec.Cmd {
+		mp3 := out + ".mp3"
 		cmdline := []string{"--quiet", "--replaygain-accurate", "--id3v2-only"}
 
 		cmdline = append(cmdline, extraArgs...)
-		cmdline = append(cmdline, in, out+".mp3")
+		cmdline = append(cmdline, wav, mp3)
 
 		return []*exec.Cmd{
 			exec.Command("lame", cmdline...),
-			id3tags(s, in, out),
+			id3tags(s, mp3),
 		}
 	}
 }
 
-func id3tags(s *mFile, in, out string) *exec.Cmd {
+func id3tags(s *mFile, mp3 string) *exec.Cmd {
 	args := []string{
 		"-t", s.Title,
 		"-a", s.Artist,
@@ -624,13 +626,13 @@ func id3tags(s *mFile, in, out string) *exec.Cmd {
 		args = append(args, "--TPE3", s.Conductor)
 	}
 
-	args = append(args, out+".mp3")
+	args = append(args, mp3)
 
 	return exec.Command("id3v2", args...)
 }
 
-func metaflac(mm *mFile, in, out string) *exec.Cmd {
-	cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", out+".flac")
+func metaflac(mm *mFile, flac string) *exec.Cmd {
+	cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cecinestpas, err := cmd.StdinPipe()
