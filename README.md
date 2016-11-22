@@ -76,6 +76,27 @@ Example
     sd init --composer "Johann Sebastian Bach" 3 4 7 2  > speeldoos.xml
     vim +/2222 speeldoos.xml
 
+### seedvault
+Re-tag a ripped cd, create a speeldoos archive file as well as some encodes.
+
+Usage:
+
+    sd seedvault --input_xml speeldoos.xml
+
+This command is best used when you've just ripped a CD or made an online purchase of some sort.
+It reads a speeldoos XML file (e.g. one created with `sd init`) and tags and renames the source files (internally) consistently.
+
+By default, it also creates a speeldoos archive, which has all the source files for this particular carrier in one file, as well as an updated speeldoos XML which is aware of the new filenames.
+
+For each of the encodes you enable (choose from: FLAC, MP3 CBR-320, MP3 VBR-V0, VBR-V2, or VBR-V6) `sd seedvault` has the ability to create a private .torrent file of the resulting directory with a tracker URL you specify in order to, um, easily synchronize your new purchase across all your devices.
+
+Example: imagine you've just purchased Bruckner's 7th symphony at Hyperion.
+
+    sd init --composer "Anton Bruckner" > speeldoos.xml
+    vim +/2222 speeldoos.xml
+    sd seedvault --input_xml speeldoos.xml --output_dir out
+    mv out/CDA67916.xml out/CDA67916.zip /path/to/speeldoos-library/
+
 History
 -------
 This project was started to scratch a very specific itch, in that every music player (software or otherwise) is absolutely rubbish at classical music.
