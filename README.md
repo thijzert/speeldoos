@@ -76,6 +76,10 @@ Example
     sd init --composer "Johann Sebastian Bach" 3 4 7 2  > speeldoos.xml
     vim +/2222 speeldoos.xml
 
+Playback
+--------
+Eventually, it's going to be possible to use your speeldoos library as a frontend for a music player, e.g. `mpd`.
+
 History
 -------
 This project was started to scratch a very specific itch, in that every music player (software or otherwise) is absolutely rubbish at classical music.
