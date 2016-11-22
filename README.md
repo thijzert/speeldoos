@@ -102,7 +102,7 @@ History
 This project was started to scratch a very specific itch, in that every music player (software or otherwise) is absolutely rubbish at classical music.
 
 Most (if not all) software assumes things like "artist" and "album," neither of which appropriately translates into the classical world, which is centered around concepts like "composer," "work," or "performer."
-The different is subtle, but it's very annoying that there's no one true way of representing classical music in existing fields, and different sources will have different conventions.
+The different is subtle, but it's very annoying that there's no one true way of representing classical music in existing fields, and different sources will have different conventions: some will correctly use the 'composer' and 'conductor' fields, which will be ignored by most players; others, anticipating this, will abuse the 'artist' field for the composer's name and try to stuff as much information as possible in the 'title' field.
 
 So whenever I see an iPod refer to any music as
 
