@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"flag"
@@ -228,6 +229,9 @@ func main() {
 	croak(os.Mkdir(*output_dir, 0755))
 	croak(os.Mkdir(path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]"), 0755))
 
+	last_bps := 0
+	all_bps := &bitness{}
+
 	for _, pf := range foo.Performances {
 		title := "(no title)"
 		if len(pf.Work.Title) > 0 {
@@ -261,16 +265,19 @@ func main() {
 			out := fmt.Sprintf("%02d - %s - %s", track_counter, pf.Work.Composer.Name, fileTitle)
 
 			mm := &mFile{
-				Basename: out,
-				Title:    fileTitle,
-				Album:    foo.Name,
-				Composer: pf.Work.Composer.Name,
-				Year:     pf.Year,
-				Track:    track_counter,
-				Disc:     sf.Disc,
+				Basename:   out,
+				Title:      fileTitle,
+				Album:      foo.Name,
+				Composer:   pf.Work.Composer.Name,
+				Performers: make([]string, 0, 2),
+				Year:       pf.Year,
+				Track:      track_counter,
+				Disc:       sf.Disc,
 			}
 
 			for _, p := range pf.Performers {
+				mm.Performers = append(mm.Performers, p.Name)
+
 				if mm.Artist == "" {
 					mm.Artist = p.Name
 				}
@@ -307,46 +314,46 @@ func main() {
 			croak(os.MkdirAll(dir, 0755))
 
 			out = path.Join(dir, cleanFilename(out)+".flac")
-
 			croak(zm.CopyTo(fn, out))
 
-			cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", out)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			pipeIn, err := cmd.StdinPipe()
-			croak(err)
-			cmd.Start()
-
-			writeFlacTag(pipeIn, "title", mm.Title)
-			writeFlacTag(pipeIn, "artist", mm.Artist)
-			writeFlacTag(pipeIn, "album", mm.Album)
-			if mm.Disc != 0 {
-				writeFlacTag(pipeIn, "discnumber", fmt.Sprintf("%d", mm.Disc))
-			}
-			writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
-			writeFlacTag(pipeIn, "composer", mm.Composer)
-			for _, p := range pf.Performers {
-				writeFlacTag(pipeIn, "performer", p.Name)
-			}
-			writeFlacTag(pipeIn, "date", fmt.Sprintf("%d", mm.Year))
-			writeFlacTag(pipeIn, "genre", "classical") // FIXME
-			pipeIn.Close()
-			croak(cmd.Wait())
+			last_bps = all_bps.Check(out)
 		}
 	}
+	croak(all_bps.Consistent())
 	log.Printf("FLAC run complete")
 
-	if *do_v2 || *do_v0 || *do_320 {
+	if last_bps > 16 {
+		dir := path.Join(*output_dir, cleanFilename(albus.Name))
+		os.Rename(dir+" [FLAC]", dir+fmt.Sprintf(" [FLAC%d]", last_bps))
+
+		log.Printf("Decoding to 16-bit WAV...")
+		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
+		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
+			flac := out + ".flac"
+			return []*exec.Cmd{
+				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+				metaflac(mf, flac),
+			}
+		})
+		log.Printf("Done decoding")
+
+	} else if *do_v2 || *do_v0 || *do_320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
-		albus.Job("FLAC", func(mf *mFile, out, in string) []*exec.Cmd {
-			// HACK: Decoding is achieved by working in the flac/ dir and swapping the input and output parameters
-			return []*exec.Cmd{exec.Command("flac", "-d", "-s", "-o", out, in+".flac")}
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+			flac := out + ".flac"
+			return []*exec.Cmd{
+				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+				metaflac(mf, flac),
+			}
 		})
 		log.Printf("Done decoding.")
 	} else {
-		albus.Job("FLAC", func(_ *mFile, _, _ string) []*exec.Cmd {
-			return []*exec.Cmd{exec.Command("true")}
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+			flac := out + ".flac"
+			return []*exec.Cmd{
+				metaflac(mf, flac),
+			}
 		})
 	}
 
@@ -375,6 +382,10 @@ func main() {
 	}
 
 	if *do_archive {
+		source_dir := " [FLAC]"
+		if last_bps > 16 {
+			source_dir = fmt.Sprintf(" [FLAC%d]", last_bps)
+		}
 		archive_name := foo.ID
 		if archive_name == "" {
 			archive_name = "speeldoos"
@@ -382,7 +393,7 @@ func main() {
 		archive_name = cleanFilename(archive_name)
 		archive_name = strings.Replace(archive_name, " ", "-", -1)
 		c := exec.Command("zip", "--quiet", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
-		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]")
+		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+source_dir)
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		c.Start()
@@ -419,6 +430,11 @@ func croak(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
+}
+
+func ncroak(n int, e error) int {
+	croak(e)
+	return n
 }
 
 func cleanFilename(value string) string {
@@ -458,6 +474,7 @@ type mFile struct {
 	Basename                                string
 	Title, Artist, Album                    string
 	Composer, Soloist, Orchestra, Conductor string
+	Performers                              []string
 	Year, Disc, Track                       int
 }
 
@@ -517,10 +534,10 @@ func (a *album) Job(dir string, fun jobFun) {
 			sub = fmt.Sprintf("disc_%02d", mf.Disc)
 		}
 		cbn := cleanFilename(mf.Basename)
-		in := path.Join(*output_dir, "wav", sub, cbn+".wav")
+		wav := path.Join(*output_dir, "wav", sub, cbn+".wav")
 		out := path.Join(working_dir, sub, cbn)
 
-		cmds <- fun(mf, in, out)
+		cmds <- fun(mf, wav, out)
 	}
 
 	close(cmds)
@@ -596,25 +613,26 @@ func (a *album) Job(dir string, fun jobFun) {
 }
 
 func lameRun(extraArgs ...string) jobFun {
-	return func(s *mFile, in, out string) []*exec.Cmd {
+	return func(s *mFile, wav, out string) []*exec.Cmd {
+		mp3 := out + ".mp3"
 		cmdline := []string{"--quiet", "--replaygain-accurate", "--id3v2-only"}
 
 		cmdline = append(cmdline, extraArgs...)
-		cmdline = append(cmdline, in, out+".mp3")
+		cmdline = append(cmdline, wav, mp3)
 
 		return []*exec.Cmd{
 			exec.Command("lame", cmdline...),
-			id3tags(s, in, out),
+			id3tags(s, mp3),
 		}
 	}
 }
 
-func id3tags(s *mFile, in, out string) *exec.Cmd {
+func id3tags(s *mFile, mp3 string) *exec.Cmd {
 	args := []string{
 		"-t", s.Title,
 		"-a", s.Artist,
 		"--TCOM", s.Composer,
-		"--genre", "32",
+		"--genre", "32", // FIXME
 	}
 	if s.Album != "" {
 		args = append(args, "-A", s.Album)
@@ -637,7 +655,82 @@ func id3tags(s *mFile, in, out string) *exec.Cmd {
 		args = append(args, "--TPE3", s.Conductor)
 	}
 
-	args = append(args, out+".mp3")
+	args = append(args, mp3)
 
 	return exec.Command("id3v2", args...)
+}
+
+func metaflac(mm *mFile, flac string) *exec.Cmd {
+	cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cecinestpas, err := cmd.StdinPipe()
+	croak(err)
+
+	pipeIn := &bytes.Buffer{}
+
+	writeFlacTag(pipeIn, "title", mm.Title)
+	writeFlacTag(pipeIn, "artist", mm.Artist)
+	writeFlacTag(pipeIn, "album", mm.Album)
+	if mm.Disc != 0 {
+		writeFlacTag(pipeIn, "discnumber", fmt.Sprintf("%d", mm.Disc))
+	}
+	writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
+	writeFlacTag(pipeIn, "composer", mm.Composer)
+	if mm.Conductor != "" {
+		writeFlacTag(pipeIn, "conductor", mm.Conductor)
+	}
+	for _, p := range mm.Performers {
+		writeFlacTag(pipeIn, "performer", p)
+	}
+	writeFlacTag(pipeIn, "date", fmt.Sprintf("%d", mm.Year))
+	writeFlacTag(pipeIn, "genre", "classical") // FIXME
+
+	go func() {
+		pipeIn.WriteTo(cecinestpas)
+		cecinestpas.Close()
+	}()
+	return cmd
+}
+
+type bitness struct {
+	seen map[int]int
+}
+
+func (b *bitness) Check(file string) int {
+	cmd := exec.Command("metaflac", "--show-bps", file)
+	cmd.Stderr = os.Stderr
+	cecinestpas, err := cmd.StdoutPipe()
+	croak(err)
+	croak(cmd.Start())
+	rv := 0
+	ncroak(fmt.Fscanln(cecinestpas, &rv))
+	croak(cmd.Wait())
+
+	if b.seen == nil {
+		b.seen = make(map[int]int)
+	}
+	if b.seen[rv] == 0 {
+		b.seen[rv] = 1
+	} else {
+		b.seen[rv] = b.seen[rv] + 1
+	}
+
+	return rv
+}
+
+func (b *bitness) Consistent() error {
+	if b.seen == nil || len(b.seen) == 0 {
+		return nil
+	}
+	if len(b.seen) == 1 {
+		return nil
+	}
+
+	rv := ""
+	for k, v := range b.seen {
+		rv = fmt.Sprintf("%s, %dx %dbit", rv, v, k)
+	}
+
+	return fmt.Errorf("Inconsistent bit depth across source files: I've seen %s", rv[2:])
 }
