@@ -4,13 +4,22 @@ import (
 	"flag"
 	"fmt"
 	"github.com/thijzert/go-rcfile"
+	"log"
 	"os"
 	"path/filepath"
 )
 
 var Config = struct {
 	ConcurrentJobs int
-	Seedvault      struct {
+	Init           struct {
+		OutputFile                              string
+		TrackFormat, DiscFormat                 string
+		Composer                                string
+		Year                                    int
+		Soloist, Orchestra, Ensemble, Conductor string
+		Discs                                   string
+	}
+	Seedvault struct {
 		InputXml, OutputDir             string
 		CoverImage, InlayImage, Booklet string
 		EACLogfile, Cuesheet            string
@@ -44,6 +53,23 @@ func init() {
 	flag.BoolVar(&Config.Seedvault.DV2, "seedvault.v2", false, "Also encode V2")
 	flag.BoolVar(&Config.Seedvault.DV6, "seedvault.v6", false, "Also encode V6 (for audiobooks)")
 
+	// Settings for `sd init`
+	flag.StringVar(&Config.Init.OutputFile, "init.output_file", "", "Output XML file")
+
+	flag.StringVar(&Config.Init.TrackFormat, "init.track_format", "track_%02d.flac", "Filename format of the track number")
+	flag.StringVar(&Config.Init.DiscFormat, "init.disc_format", "disc_%02d", "Directory name format of the disc number")
+
+	flag.StringVar(&Config.Init.Composer, "init.composer", "2222", "Preset the composer of each work")
+	flag.IntVar(&Config.Init.Year, "init.year", 2222, "Preset the year of each performance")
+
+	flag.StringVar(&Config.Init.Soloist, "init.soloist", "", "Pre-fill a soloist in each performance")
+	flag.StringVar(&Config.Init.Orchestra, "init.orchestra", "", "Pre-fill an orchestra in each performance")
+	flag.StringVar(&Config.Init.Ensemble, "init.ensemble", "", "Pre-fill an ensemble in each performance")
+	flag.StringVar(&Config.Init.Conductor, "init.conductor", "", "Pre-fill a conductor in each performance")
+
+	flag.StringVar(&Config.Init.Discs, "init.discs", "", "A space separated list of the number of tracks in each disc, for a multi-disc release.")
+
+	// Parse config file first, and override with anything on the commandline
 	rcfile.Parse()
 	flag.Parse()
 
@@ -64,9 +90,22 @@ func main() {
 
 	if args[0] == "seedvault" {
 		seedvault_main(args[1:])
+	} else if args[0] == "init" {
+		init_main(args[1:])
 	} else {
 		fmt.Fprintf(os.Stderr, "Unknown subcommand %s.\n", args[0])
 		os.Exit(1)
 		return
 	}
+}
+
+func croak(e error) {
+	if e != nil {
+		log.Fatal(e)
+	}
+}
+
+func ncroak(n int, e error) int {
+	croak(e)
+	return n
 }

@@ -394,17 +394,6 @@ func seedvault_main(argv []string) {
 	}
 }
 
-func croak(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
-}
-
-func ncroak(n int, e error) int {
-	croak(e)
-	return n
-}
-
 func cleanFilename(value string) string {
 	value = strings.Replace(value, "\n", " ", -1)
 	value = strings.Replace(value, "\r", " ", -1)
