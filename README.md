@@ -2,6 +2,8 @@ Speeldoos is a database format for Classical Music. The name is Dutch for "music
 
 [![stability-experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://github.com/emersion/stability-badges#experimental)
 
+This project contains the format specification as well as some utilities for working with the database format.
+
 Installation
 ---------------
 Different parts of speeldoos will have different dependencies; install them as needed. In no particular order, the dependencies include:
