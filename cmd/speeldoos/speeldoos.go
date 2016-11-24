@@ -75,11 +75,9 @@ func init() {
 	rcfile.ParseInto(cmdline, "speeldoos")
 	cmdline.Parse(os.Args[1:])
 
-	args := cmdline.Args()
-
-	if len(args) > 0 && getSubCmd(args[0]) != nil {
-		// HACK: Create aliases for subcommand-specific flags, then call flag.Parse() again.
-		prefix := args[0] + "."
+	// HACK: Create aliases for subcommand-specific flags, then call flag.Parse() again.
+	if len(os.Args) > 1 && getSubCmd(os.Args[1]) != nil {
+		prefix := os.Args[1] + "."
 		ff := make([]*flag.Flag, 0, 10)
 		cmdline.VisitAll(func(f *flag.Flag) {
 			if len(f.Name) > len(prefix) && f.Name[0:len(prefix)] == prefix {
@@ -89,8 +87,7 @@ func init() {
 		for _, f := range ff {
 			cmdline.Var(f.Value, f.Name[len(prefix):], f.Usage)
 		}
-		cmdline.Parse(os.Args[1:])
-		args = cmdline.Args()
+		cmdline.Parse(os.Args[2:])
 	}
 
 	// Sanity checks
@@ -113,18 +110,18 @@ func getSubCmd(name string) SubCommand {
 }
 
 func main() {
-	args := cmdline.Args()
-	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] COMMAND\n", filepath.Base(os.Args[0]))
+	if len(os.Args) < 2 {
+		fmt.Fprintf(os.Stderr, "Usage: %s COMMAND [options]\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
 		return
 	}
 
-	cmd := getSubCmd(args[0])
+	cmd := getSubCmd(os.Args[1])
+	args := cmdline.Args()
 	if cmd != nil {
-		cmd(args[1:])
+		cmd(args)
 	} else {
-		fmt.Fprintf(os.Stderr, "Unknown subcommand %s.\n", args[0])
+		fmt.Fprintf(os.Stderr, "Unknown subcommand %s.\n", os.Args[1])
 		os.Exit(1)
 		return
 	}
