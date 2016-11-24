@@ -29,49 +29,69 @@ var Config = struct {
 	}
 }{}
 
+var cmdline = flag.NewFlagSet("speeldoos", flag.ContinueOnError)
+
 func init() {
 	// Global settings
-	flag.IntVar(&Config.ConcurrentJobs, "j", 2, "Number of concurrent jobs")
+	cmdline.IntVar(&Config.ConcurrentJobs, "j", 2, "Number of concurrent jobs")
 
 	// Settings pertaining to `sd seedvault`
-	flag.StringVar(&Config.Seedvault.InputXml, "seedvault.input_xml", "", "Input XML file")
-	flag.StringVar(&Config.Seedvault.OutputDir, "seedvault.output_dir", "seedvault", "Output directory")
+	cmdline.StringVar(&Config.Seedvault.InputXml, "seedvault.input_xml", "", "Input XML file")
+	cmdline.StringVar(&Config.Seedvault.OutputDir, "seedvault.output_dir", "seedvault", "Output directory")
 
-	flag.StringVar(&Config.Seedvault.CoverImage, "seedvault.cover_image", "", "Path to cover image")
-	flag.StringVar(&Config.Seedvault.InlayImage, "seedvault.inlay_image", "", "Path to inlay image")
-	flag.StringVar(&Config.Seedvault.Booklet, "seedvault.booklet", "", "Path to booklet PDF")
-	flag.StringVar(&Config.Seedvault.EACLogfile, "seedvault.eac_logfile", "", "Path to EAC log file")
-	flag.StringVar(&Config.Seedvault.Cuesheet, "seedvault.cuesheet", "", "Path to cuesheet")
+	cmdline.StringVar(&Config.Seedvault.CoverImage, "seedvault.cover_image", "", "Path to cover image")
+	cmdline.StringVar(&Config.Seedvault.InlayImage, "seedvault.inlay_image", "", "Path to inlay image")
+	cmdline.StringVar(&Config.Seedvault.Booklet, "seedvault.booklet", "", "Path to booklet PDF")
+	cmdline.StringVar(&Config.Seedvault.EACLogfile, "seedvault.eac_logfile", "", "Path to EAC log file")
+	cmdline.StringVar(&Config.Seedvault.Cuesheet, "seedvault.cuesheet", "", "Path to cuesheet")
 
-	flag.BoolVar(&Config.Seedvault.NameAfterComposer, "name_after_composer", false, "Name the album after the first composer rather than the first performer")
+	cmdline.BoolVar(&Config.Seedvault.NameAfterComposer, "name_after_composer", false, "Name the album after the first composer rather than the first performer")
 
-	flag.StringVar(&Config.Seedvault.Tracker, "seedvault.tracker", "", "URL to private tracker")
+	cmdline.StringVar(&Config.Seedvault.Tracker, "seedvault.tracker", "", "URL to private tracker")
 
-	flag.BoolVar(&Config.Seedvault.DArchive, "seedvault.archive", true, "Create a speeldoos archive")
-	flag.BoolVar(&Config.Seedvault.D320, "seedvault.320", false, "Also encode MP3-320")
-	flag.BoolVar(&Config.Seedvault.DV0, "seedvault.v0", false, "Also encode V0")
-	flag.BoolVar(&Config.Seedvault.DV2, "seedvault.v2", false, "Also encode V2")
-	flag.BoolVar(&Config.Seedvault.DV6, "seedvault.v6", false, "Also encode V6 (for audiobooks)")
+	cmdline.BoolVar(&Config.Seedvault.DArchive, "seedvault.archive", true, "Create a speeldoos archive")
+	cmdline.BoolVar(&Config.Seedvault.D320, "seedvault.320", false, "Also encode MP3-320")
+	cmdline.BoolVar(&Config.Seedvault.DV0, "seedvault.v0", false, "Also encode V0")
+	cmdline.BoolVar(&Config.Seedvault.DV2, "seedvault.v2", false, "Also encode V2")
+	cmdline.BoolVar(&Config.Seedvault.DV6, "seedvault.v6", false, "Also encode V6 (for audiobooks)")
 
 	// Settings for `sd init`
-	flag.StringVar(&Config.Init.OutputFile, "init.output_file", "", "Output XML file")
+	cmdline.StringVar(&Config.Init.OutputFile, "init.output_file", "", "Output XML file")
 
-	flag.StringVar(&Config.Init.TrackFormat, "init.track_format", "track_%02d.flac", "Filename format of the track number")
-	flag.StringVar(&Config.Init.DiscFormat, "init.disc_format", "disc_%02d", "Directory name format of the disc number")
+	cmdline.StringVar(&Config.Init.TrackFormat, "init.track_format", "track_%02d.flac", "Filename format of the track number")
+	cmdline.StringVar(&Config.Init.DiscFormat, "init.disc_format", "disc_%02d", "Directory name format of the disc number")
 
-	flag.StringVar(&Config.Init.Composer, "init.composer", "2222", "Preset the composer of each work")
-	flag.IntVar(&Config.Init.Year, "init.year", 2222, "Preset the year of each performance")
+	cmdline.StringVar(&Config.Init.Composer, "init.composer", "2222", "Preset the composer of each work")
+	cmdline.IntVar(&Config.Init.Year, "init.year", 2222, "Preset the year of each performance")
 
-	flag.StringVar(&Config.Init.Soloist, "init.soloist", "", "Pre-fill a soloist in each performance")
-	flag.StringVar(&Config.Init.Orchestra, "init.orchestra", "", "Pre-fill an orchestra in each performance")
-	flag.StringVar(&Config.Init.Ensemble, "init.ensemble", "", "Pre-fill an ensemble in each performance")
-	flag.StringVar(&Config.Init.Conductor, "init.conductor", "", "Pre-fill a conductor in each performance")
+	cmdline.StringVar(&Config.Init.Soloist, "init.soloist", "", "Pre-fill a soloist in each performance")
+	cmdline.StringVar(&Config.Init.Orchestra, "init.orchestra", "", "Pre-fill an orchestra in each performance")
+	cmdline.StringVar(&Config.Init.Ensemble, "init.ensemble", "", "Pre-fill an ensemble in each performance")
+	cmdline.StringVar(&Config.Init.Conductor, "init.conductor", "", "Pre-fill a conductor in each performance")
 
-	flag.StringVar(&Config.Init.Discs, "init.discs", "", "A space separated list of the number of tracks in each disc, for a multi-disc release.")
+	cmdline.StringVar(&Config.Init.Discs, "init.discs", "", "A space separated list of the number of tracks in each disc, for a multi-disc release.")
 
 	// Parse config file first, and override with anything on the commandline
-	rcfile.Parse()
-	flag.Parse()
+	rcfile.ParseInto(cmdline, "speeldoos")
+	cmdline.Parse(os.Args[1:])
+
+	args := cmdline.Args()
+
+	if len(args) > 0 && (args[0] == "seedvault" || args[0] == "init") {
+		// HACK: Create aliases for subcommand-specific flags, then call flag.Parse() again.
+		prefix := args[0] + "."
+		ff := make([]*flag.Flag, 0, 10)
+		cmdline.VisitAll(func(f *flag.Flag) {
+			if len(f.Name) > len(prefix) && f.Name[0:len(prefix)] == prefix {
+				ff = append(ff, f)
+			}
+		})
+		for _, f := range ff {
+			cmdline.Var(f.Value, f.Name[len(prefix):], f.Usage)
+		}
+		cmdline.Parse(os.Args[1:])
+		args = cmdline.Args()
+	}
 
 	// Sanity checks
 
@@ -81,7 +101,7 @@ func init() {
 }
 
 func main() {
-	args := flag.Args()
+	args := cmdline.Args()
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "Usage: %s [options] COMMAND\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
