@@ -11,6 +11,7 @@ import (
 
 var Config = struct {
 	ConcurrentJobs int
+	LibraryDir     string
 	Init           struct {
 		OutputFile                              string
 		TrackFormat, DiscFormat                 string
@@ -18,6 +19,9 @@ var Config = struct {
 		Year                                    int
 		Soloist, Orchestra, Ensemble, Conductor string
 		Discs                                   string
+	}
+	Grep struct {
+		CaseSensitive bool
 	}
 	Seedvault struct {
 		InputXml, OutputDir             string
@@ -34,6 +38,7 @@ var cmdline = flag.NewFlagSet("speeldoos", flag.ContinueOnError)
 func init() {
 	// Global settings
 	cmdline.IntVar(&Config.ConcurrentJobs, "j", 2, "Number of concurrent jobs")
+	cmdline.StringVar(&Config.LibraryDir, "library_dir", ".", "Search speeldoos files in this directory")
 
 	// Settings pertaining to `sd seedvault`
 	cmdline.StringVar(&Config.Seedvault.InputXml, "seedvault.input_xml", "", "Input XML file")
@@ -55,6 +60,9 @@ func init() {
 	cmdline.BoolVar(&Config.Seedvault.DV2, "seedvault.v2", false, "Also encode V2")
 	cmdline.BoolVar(&Config.Seedvault.DV6, "seedvault.v6", false, "Also encode V6 (for audiobooks)")
 
+	// Settings for `sd grep`
+	cmdline.BoolVar(&Config.Grep.CaseSensitive, "grep.I", false, "Perforn case-sensitive matching")
+
 	// Settings for `sd init`
 	cmdline.StringVar(&Config.Init.OutputFile, "init.output_file", "", "Output XML file")
 
@@ -72,7 +80,7 @@ func init() {
 	cmdline.StringVar(&Config.Init.Discs, "init.discs", "", "A space separated list of the number of tracks in each disc, for a multi-disc release.")
 
 	// Parse config file first, and override with anything on the commandline
-	rcfile.ParseInto(cmdline, "speeldoos")
+	rcfile.ParseInto(cmdline, "speeldoosrc")
 	cmdline.Parse(os.Args[1:])
 
 	// HACK: Create aliases for subcommand-specific flags, then call flag.Parse() again.
@@ -102,6 +110,8 @@ type SubCommand func([]string)
 func getSubCmd(name string) SubCommand {
 	if name == "seedvault" {
 		return seedvault_main
+	} else if name == "grep" {
+		return grep_main
 	} else if name == "init" {
 		return init_main
 	} else {

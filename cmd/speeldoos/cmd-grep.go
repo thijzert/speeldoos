@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
@@ -10,22 +9,10 @@ import (
 	"regexp"
 )
 
-var (
-	case_sensitive = flag.Bool("I", false, "Perforn case-sensitive matching")
-	part_context   = flag.Int("part-context", 2, "Show this much context parts around a matching part")
-
-	speeldoos_dir = flag.String("dir", ".", "Search speeldoos files in this directory")
-)
-
-func init() {
-	flag.Parse()
-}
-
-func main() {
+func grep_main(args []string) {
 	re := make([]*regexp.Regexp, 0)
-	args := flag.Args()
 	for _, a := range args {
-		if !*case_sensitive {
+		if !Config.Grep.CaseSensitive {
 			a = "(?i)" + a
 		}
 		r, er := regexp.Compile(a)
@@ -35,7 +22,7 @@ func main() {
 		re = append(re, r)
 	}
 
-	d, err := os.Open(*speeldoos_dir)
+	d, err := os.Open(Config.LibraryDir)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +40,7 @@ func main() {
 			continue
 		}
 
-		carrier, err := speeldoos.ImportCarrier(path.Join(*speeldoos_dir, fn))
+		carrier, err := speeldoos.ImportCarrier(path.Join(Config.LibraryDir, fn))
 		if err != nil {
 			fmt.Printf("%s: %s\n", fn, err)
 			continue
