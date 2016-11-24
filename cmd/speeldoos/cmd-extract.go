@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/zipmap"
@@ -11,17 +10,8 @@ import (
 	"os/exec"
 )
 
-var (
-	input_xml = flag.String("input_xml", "", "Input XML file")
-	bitrate   = flag.String("bitrate", "64k", "Output audio bitrate (mp3)")
-)
-
-func init() {
-	flag.Parse()
-}
-
-func main() {
-	foo, err := speeldoos.ImportCarrier(*input_xml)
+func extract_main(args []string) {
+	foo, err := speeldoos.ImportCarrier(Config.Extract.InputXml)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,7 +37,7 @@ func main() {
 		}
 		inp = fmt.Sprintf("concat:%s", inp[1:])
 
-		cmd := exec.Command("ffmpeg", "-y", "-i", inp, "-c:a", "libmp3lame", "-b:a", *bitrate, outp)
+		cmd := exec.Command("ffmpeg", "-y", "-i", inp, "-c:a", "libmp3lame", "-b:a", Config.Extract.Bitrate, outp)
 		cmd.ExtraFiles = make([]*os.File, len(pf.SourceFiles))
 
 		pipes := make([]*os.File, len(pf.SourceFiles))
