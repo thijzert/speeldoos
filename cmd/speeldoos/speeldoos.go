@@ -13,8 +13,7 @@ var Config = struct {
 	ConcurrentJobs int
 	LibraryDir     string
 	Extract        struct {
-		InputXml string
-		Bitrate  string
+		Bitrate string
 	}
 	Grep struct {
 		CaseSensitive bool
@@ -45,7 +44,6 @@ func init() {
 	cmdline.StringVar(&Config.LibraryDir, "library_dir", ".", "Search speeldoos files in this directory")
 
 	// Settings for `sd extract`
-	cmdline.StringVar(&Config.Extract.InputXml, "extract.input_xml", "", "Input XML file")
 	cmdline.StringVar(&Config.Extract.Bitrate, "extract.bitrate", "64k", "Output audio bitrate (mp3)")
 
 	// Settings for `sd grep`
