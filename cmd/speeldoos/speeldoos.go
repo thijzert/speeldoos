@@ -77,7 +77,7 @@ func init() {
 
 	args := cmdline.Args()
 
-	if len(args) > 0 && (args[0] == "seedvault" || args[0] == "init") {
+	if len(args) > 0 && getSubCmd(args[0]) != nil {
 		// HACK: Create aliases for subcommand-specific flags, then call flag.Parse() again.
 		prefix := args[0] + "."
 		ff := make([]*flag.Flag, 0, 10)
@@ -100,6 +100,18 @@ func init() {
 	}
 }
 
+type SubCommand func([]string)
+
+func getSubCmd(name string) SubCommand {
+	if name == "seedvault" {
+		return seedvault_main
+	} else if name == "init" {
+		return init_main
+	} else {
+		return nil
+	}
+}
+
 func main() {
 	args := cmdline.Args()
 	if len(args) == 0 {
@@ -108,10 +120,9 @@ func main() {
 		return
 	}
 
-	if args[0] == "seedvault" {
-		seedvault_main(args[1:])
-	} else if args[0] == "init" {
-		init_main(args[1:])
+	cmd := getSubCmd(args[0])
+	if cmd != nil {
+		cmd(args[1:])
 	} else {
 		fmt.Fprintf(os.Stderr, "Unknown subcommand %s.\n", args[0])
 		os.Exit(1)
