@@ -10,6 +10,7 @@ import (
 )
 
 var Config = struct {
+	Subcommand     string
 	ConcurrentJobs int
 	LibraryDir     string
 	Extract        struct {
@@ -98,18 +99,24 @@ func init() {
 	cmdline.Parse(os.Args[1:])
 
 	// HACK: Create aliases for subcommand-specific flags, then call flag.Parse() again.
-	if len(os.Args) > 1 && getSubCmd(os.Args[1]) != nil {
-		prefix := os.Args[1] + "."
-		ff := make([]*flag.Flag, 0, 10)
-		cmdline.VisitAll(func(f *flag.Flag) {
-			if len(f.Name) > len(prefix) && f.Name[0:len(prefix)] == prefix {
-				ff = append(ff, f)
+	args := cmdline.Args()
+	if len(args) > 0 {
+		Config.Subcommand = args[0]
+
+		if getSubCmd(Config.Subcommand) != nil {
+			prefix := Config.Subcommand + "."
+			ff := make([]*flag.Flag, 0, 10)
+			cmdline.VisitAll(func(f *flag.Flag) {
+				if len(f.Name) > len(prefix) && f.Name[0:len(prefix)] == prefix {
+					ff = append(ff, f)
+				}
+			})
+			for _, f := range ff {
+				cmdline.Var(f.Value, f.Name[len(prefix):], f.Usage)
 			}
-		})
-		for _, f := range ff {
-			cmdline.Var(f.Value, f.Name[len(prefix):], f.Usage)
 		}
-		cmdline.Parse(os.Args[2:])
+
+		cmdline.Parse(args[1:])
 	}
 
 	// Sanity checks
@@ -136,18 +143,18 @@ func getSubCmd(name string) SubCommand {
 }
 
 func main() {
-	if len(os.Args) < 2 {
+	if Config.Subcommand == "" {
 		fmt.Fprintf(os.Stderr, "Usage: %s COMMAND [options]\n", filepath.Base(os.Args[0]))
 		os.Exit(1)
 		return
 	}
 
-	cmd := getSubCmd(os.Args[1])
+	cmd := getSubCmd(Config.Subcommand)
 	args := cmdline.Args()
 	if cmd != nil {
 		cmd(args)
 	} else {
-		fmt.Fprintf(os.Stderr, "Unknown subcommand %s.\n", os.Args[1])
+		fmt.Fprintf(os.Stderr, "Unknown subcommand %s.\n", Config.Subcommand)
 		os.Exit(1)
 		return
 	}
