@@ -15,21 +15,19 @@ Different parts of speeldoos will have different dependencies; install them as n
 
 On my machine I installed most of these using the following command: `sudo apt-get install flac lame mktorrent ffmpeg`, but your mileage may vary.
 
-Currently, the project only exists as a constellation of several small scripts, though this is going to change eventually. On mac or linux, try running:
+Currently, this project primarily consists of the format specification (in XSD form) and one command-line utility for maintaining a local speeldoos database.
+To install this utility on mac or linux, try running:
 
-    go get -u github.com/thijzert/speeldoos
+    go get -u github.com/thijzert/speeldoos/...
 
-and add the following lines to your `~/.profile`:
+and make sure `$GOPATH/bin` is in your PATH.
+Personally, I like to alias `speeldoos` to `sd` (sorry SimpleDefects), which you can do by adding the following lines to your `~/.profile`:
 
 ```bash
-sd() {
-	PG=$1
-	shift
-	go run $GOPATH/src/github.com/thijzert/speeldoos/bin/$PG/*.go "$@"
-}
+alias sd="$GOPATH/bin/speeldoos"
 ```
 
-Afterwards (you may need to restart your shell first), use the `sd` prefix to any sub-script in speeldoos, e.g.:
+Afterwards (you may need to restart your shell first), use the `sd` (or `speeldoos` if you prefer) prefix to any sub-script in speeldoos, e.g.:
 
     sd grep wohltemperirte
     sd init --composer="Johann Sebastian Bach" 48
