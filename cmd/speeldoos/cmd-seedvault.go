@@ -5,9 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"flag"
 	"fmt"
-	"github.com/thijzert/go-rcfile"
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/zipmap"
@@ -20,47 +18,15 @@ import (
 	"sync"
 )
 
-var (
-	input_xml  = flag.String("input_xml", "", "Input XML file")
-	output_dir = flag.String("output_dir", "seedvault", "Output directory")
-
-	cover_image = flag.String("cover_image", "", "Path to cover image")
-	inlay_image = flag.String("inlay_image", "", "Path to inlay image")
-	booklet     = flag.String("booklet", "", "Path to booklet PDF")
-	eac_logfile = flag.String("eac_logfile", "", "Path to EAC log file")
-	cuesheet    = flag.String("cuesheet", "", "Path to cuesheet")
-
-	name_after_composer = flag.Bool("name_after_composer", false, "Name the album after the first composer rather than the first performer")
-
-	tracker_url = flag.String("tracker", "", "URL to private tracker")
-
-	do_archive = flag.Bool("archive", true, "Create a speeldoos archive")
-	do_320     = flag.Bool("320", false, "Also encode MP3-320")
-	do_v0      = flag.Bool("v0", false, "Also encode V0")
-	do_v2      = flag.Bool("v2", false, "Also encode V2")
-	do_v6      = flag.Bool("v6", false, "Also encode V6 (for audiobooks)")
-
-	conc_jobs = flag.Int("j", 2, "Number of concurrent jobs")
-)
-
 var zm = zipmap.New()
-
-func init() {
-	rcfile.Parse()
-	flag.Parse()
-
-	if *conc_jobs < 1 {
-		*conc_jobs = 1
-	}
-}
 
 func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("\nAbout to start an encode with the following settings:\n")
 
-	fmt.Printf("\nInput XML file: %s %s\n", checkFileExists(*input_xml), *input_xml)
-	fmt.Printf("Output directory: %s\n", *output_dir)
+	fmt.Printf("\nInput XML file: %s %s\n", checkFileExists(Config.Seedvault.InputXml), Config.Seedvault.InputXml)
+	fmt.Printf("Output directory: %s\n", Config.Seedvault.OutputDir)
 
-	carrier, err := speeldoos.ImportCarrier(*input_xml)
+	carrier, err := speeldoos.ImportCarrier(Config.Seedvault.InputXml)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,9 +38,9 @@ func confirmSettings() *speeldoos.Carrier {
 		}
 	}
 
-	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(*cover_image), *cover_image)
-	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(*inlay_image), *inlay_image)
-	fmt.Printf("Booklet file: %s %s\n", checkFileExists(*booklet), *booklet)
+	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(Config.Seedvault.CoverImage), Config.Seedvault.CoverImage)
+	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(Config.Seedvault.InlayImage), Config.Seedvault.InlayImage)
+	fmt.Printf("Booklet file: %s %s\n", checkFileExists(Config.Seedvault.Booklet), Config.Seedvault.Booklet)
 
 	logfile_exists, cuesheet_exists := true, true
 
@@ -86,7 +52,7 @@ func confirmSettings() *speeldoos.Carrier {
 		fmt.Printf("\n")
 
 		fmt.Printf("EAC log file: ")
-		if *eac_logfile == "" {
+		if Config.Seedvault.EACLogfile == "" {
 			fmt.Printf("%s\n", checkFileExists(""))
 		} else {
 			for d, _ := range discs {
@@ -94,16 +60,16 @@ func confirmSettings() *speeldoos.Carrier {
 				if d > 0 {
 					sub = fmt.Sprintf("disc_%02d", d)
 				}
-				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *eac_logfile)))
-				if !zm.Exists(path.Join(sub, *eac_logfile)) {
+				fmt.Printf("%s  ", checkFileExists(path.Join(sub, Config.Seedvault.EACLogfile)))
+				if !zm.Exists(path.Join(sub, Config.Seedvault.EACLogfile)) {
 					logfile_exists = false
 				}
 			}
-			fmt.Printf("%s\n", *eac_logfile)
+			fmt.Printf("%s\n", Config.Seedvault.EACLogfile)
 		}
 
 		fmt.Printf("Cue sheet:    ")
-		if *cuesheet == "" {
+		if Config.Seedvault.Cuesheet == "" {
 			fmt.Printf("%s\n", checkFileExists(""))
 		} else {
 			for d, _ := range discs {
@@ -111,55 +77,55 @@ func confirmSettings() *speeldoos.Carrier {
 				if d > 0 {
 					sub = fmt.Sprintf("disc_%02d", d)
 				}
-				fmt.Printf("%s  ", checkFileExists(path.Join(sub, *cuesheet)))
-				if !zm.Exists(path.Join(sub, *cuesheet)) {
+				fmt.Printf("%s  ", checkFileExists(path.Join(sub, Config.Seedvault.Cuesheet)))
+				if !zm.Exists(path.Join(sub, Config.Seedvault.Cuesheet)) {
 					cuesheet_exists = false
 				}
 			}
-			fmt.Printf("%s\n", *cuesheet)
+			fmt.Printf("%s\n", Config.Seedvault.Cuesheet)
 		}
 	} else {
-		fmt.Printf("EAC log file: %s %s\n", checkFileExists(*eac_logfile), *eac_logfile)
-		fmt.Printf("Cue sheet:    %s %s\n", checkFileExists(*cuesheet), *cuesheet)
+		fmt.Printf("EAC log file: %s %s\n", checkFileExists(Config.Seedvault.EACLogfile), Config.Seedvault.EACLogfile)
+		fmt.Printf("Cue sheet:    %s %s\n", checkFileExists(Config.Seedvault.Cuesheet), Config.Seedvault.Cuesheet)
 
-		logfile_exists = zm.Exists(*eac_logfile)
-		cuesheet_exists = zm.Exists(*cuesheet)
+		logfile_exists = zm.Exists(Config.Seedvault.EACLogfile)
+		cuesheet_exists = zm.Exists(Config.Seedvault.Cuesheet)
 	}
 
-	if *tracker_url != "" {
-		fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(*tracker_url))
+	if Config.Seedvault.Tracker != "" {
+		fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(Config.Seedvault.Tracker))
 	}
 
 	fmt.Printf("\nEncodes to run: FLAC    %s\n", yes(true))
-	fmt.Printf("                MP3-320 %s\n", yes(*do_320))
-	fmt.Printf("                MP3-V0  %s\n", yes(*do_v0))
-	fmt.Printf("                MP3-V2  %s\n", yes(*do_v2))
-	if *do_v6 {
-		fmt.Printf("                MP3-V6  %s\n", yes(*do_v6))
+	fmt.Printf("                MP3-320 %s\n", yes(Config.Seedvault.D320))
+	fmt.Printf("                MP3-V0  %s\n", yes(Config.Seedvault.DV0))
+	fmt.Printf("                MP3-V2  %s\n", yes(Config.Seedvault.DV2))
+	if Config.Seedvault.DV6 {
+		fmt.Printf("                MP3-V6  %s\n", yes(Config.Seedvault.DV6))
 	}
-	fmt.Printf("                archive %s\n", yes(*do_archive))
-	fmt.Printf("Number of concurrent encoding processes:  %d\n", *conc_jobs)
+	fmt.Printf("                archive %s\n", yes(Config.Seedvault.DArchive))
+	fmt.Printf("Number of concurrent encoding processes:  %d\n", Config.ConcurrentJobs)
 
 	fmt.Printf("\nIf the above looks good, hit <enter> to continue.\n")
 	fmt.Printf("Otherwise, hit Ctrl+C to cancel the process.\n")
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
 
-	if *cover_image != "" && !zm.Exists(*cover_image) {
-		*cover_image = ""
+	if Config.Seedvault.CoverImage != "" && !zm.Exists(Config.Seedvault.CoverImage) {
+		Config.Seedvault.CoverImage = ""
 	}
-	if *inlay_image != "" && !zm.Exists(*inlay_image) {
-		*inlay_image = ""
+	if Config.Seedvault.InlayImage != "" && !zm.Exists(Config.Seedvault.InlayImage) {
+		Config.Seedvault.InlayImage = ""
 	}
-	if *booklet != "" && !zm.Exists(*booklet) {
-		*booklet = ""
+	if Config.Seedvault.Booklet != "" && !zm.Exists(Config.Seedvault.Booklet) {
+		Config.Seedvault.Booklet = ""
 	}
 
 	if carrier.Source == "WEB" {
-		if *eac_logfile != "" && !logfile_exists {
-			*eac_logfile = ""
+		if Config.Seedvault.EACLogfile != "" && !logfile_exists {
+			Config.Seedvault.EACLogfile = ""
 		}
-		if *cuesheet != "" && !cuesheet_exists {
-			*cuesheet = ""
+		if Config.Seedvault.Cuesheet != "" && !cuesheet_exists {
+			Config.Seedvault.Cuesheet = ""
 		}
 	}
 
@@ -185,7 +151,7 @@ func yes(i bool) string {
 	return tc.Bblack("no")
 }
 
-func main() {
+func seedvault_main(argv []string) {
 	foo := confirmSettings()
 
 	track_counter := 0
@@ -195,7 +161,7 @@ func main() {
 
 	albus := newAlbum(foo.Name)
 	for _, pf := range foo.Performances {
-		if *name_after_composer {
+		if Config.Seedvault.NameAfterComposer {
 			if pf.Work.Composer.Name != "" {
 				albus.Name = pf.Work.Composer.Name + " - " + foo.Name
 			}
@@ -215,6 +181,8 @@ func main() {
 		albus.Name = albus.Name + fmt.Sprintf(" [%s]", foo.Source)
 	}
 
+	albus.AdditionalFiles = argv
+
 	discs := make(map[int]int)
 	for _, pf := range foo.Performances {
 		for _, sf := range pf.SourceFiles {
@@ -226,8 +194,8 @@ func main() {
 		albus.Discs = append(albus.Discs, d)
 	}
 
-	croak(os.Mkdir(*output_dir, 0755))
-	croak(os.Mkdir(path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]"), 0755))
+	croak(os.Mkdir(Config.Seedvault.OutputDir, 0755))
+	croak(os.Mkdir(path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name)+" [FLAC]"), 0755))
 
 	last_bps := 0
 	all_bps := &bitness{}
@@ -308,9 +276,9 @@ func main() {
 			sub := ""
 			if sf.Disc != 0 {
 				sub = fmt.Sprintf("disc_%02d", sf.Disc)
-				croak(os.MkdirAll(path.Join(*output_dir, "wav", sub), 0755))
+				croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav", sub), 0755))
 			}
-			dir := path.Join(*output_dir, cleanFilename(albus.Name)+" [FLAC]", sub)
+			dir := path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name)+" [FLAC]", sub)
 			croak(os.MkdirAll(dir, 0755))
 
 			out = path.Join(dir, cleanFilename(out)+".flac")
@@ -323,11 +291,11 @@ func main() {
 	log.Printf("FLAC run complete")
 
 	if last_bps > 16 {
-		dir := path.Join(*output_dir, cleanFilename(albus.Name))
+		dir := path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name))
 		os.Rename(dir+" [FLAC]", dir+fmt.Sprintf(" [FLAC%d]", last_bps))
 
 		log.Printf("Decoding to 16-bit WAV...")
-		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
+		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
 		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
 			flac := out + ".flac"
 			return []*exec.Cmd{
@@ -337,9 +305,9 @@ func main() {
 		})
 		log.Printf("Done decoding")
 
-	} else if *do_v2 || *do_v0 || *do_320 {
+	} else if Config.Seedvault.DV2 || Config.Seedvault.DV0 || Config.Seedvault.D320 {
 		log.Printf("Decoding to WAV...")
-		croak(os.MkdirAll(path.Join(*output_dir, "wav"), 0755))
+		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
 		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
 			flac := out + ".flac"
 			return []*exec.Cmd{
@@ -357,31 +325,31 @@ func main() {
 		})
 	}
 
-	if *do_v6 {
+	if Config.Seedvault.DV6 {
 		log.Printf("Encoding V6 profile...")
 		albus.Job("V6", lameRun("-V6", "--vbr-new"))
 		log.Printf("Done encoding.")
 	}
 
-	if *do_v2 {
+	if Config.Seedvault.DV2 {
 		log.Printf("Encoding V2 profile...")
 		albus.Job("V2", lameRun("-V2", "--vbr-new"))
 		log.Printf("Done encoding.")
 	}
 
-	if *do_v0 {
+	if Config.Seedvault.DV0 {
 		log.Printf("Encoding V0 profile...")
 		albus.Job("V0", lameRun("-V0", "--vbr-new"))
 		log.Printf("Done encoding.")
 	}
 
-	if *do_320 {
+	if Config.Seedvault.D320 {
 		log.Printf("Encoding 320 profile...")
 		albus.Job("320", lameRun("-b", "320"))
 		log.Printf("Done encoding.")
 	}
 
-	if *do_archive {
+	if Config.Seedvault.DArchive {
 		source_dir := " [FLAC]"
 		if last_bps > 16 {
 			source_dir = fmt.Sprintf(" [FLAC%d]", last_bps)
@@ -393,17 +361,17 @@ func main() {
 		archive_name = cleanFilename(archive_name)
 		archive_name = strings.Replace(archive_name, " ", "-", -1)
 		c := exec.Command("zip", "--quiet", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
-		c.Dir = path.Join(*output_dir, cleanFilename(albus.Name)+source_dir)
+		c.Dir = path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name)+source_dir)
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		c.Start()
 		croak(c.Wait())
 
-		bar, err := speeldoos.ImportCarrier(*input_xml)
+		bar, err := speeldoos.ImportCarrier(Config.Seedvault.InputXml)
 		croak(err)
 
 		h := sha256.New()
-		f, err := os.Open(path.Join(*output_dir, archive_name+".zip"))
+		f, err := os.Open(path.Join(Config.Seedvault.OutputDir, archive_name+".zip"))
 		croak(err)
 		_, err = io.Copy(h, f)
 		croak(err)
@@ -422,19 +390,8 @@ func main() {
 			}
 		}
 
-		bar.Write(path.Join(*output_dir, archive_name+".xml"))
+		bar.Write(path.Join(Config.Seedvault.OutputDir, archive_name+".xml"))
 	}
-}
-
-func croak(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
-}
-
-func ncroak(n int, e error) int {
-	croak(e)
-	return n
 }
 
 func cleanFilename(value string) string {
@@ -479,9 +436,10 @@ type mFile struct {
 }
 
 type album struct {
-	Name   string
-	Discs  []int
-	Tracks []*mFile
+	Name            string
+	Discs           []int
+	Tracks          []*mFile
+	AdditionalFiles []string
 }
 
 func newAlbum(name string) *album {
@@ -496,7 +454,7 @@ func (a *album) Add(mm *mFile) {
 }
 
 func (a *album) Job(dir string, fun jobFun) {
-	working_dir := path.Join(*output_dir, cleanFilename(a.Name)+" ["+dir+"]")
+	working_dir := path.Join(Config.Seedvault.OutputDir, cleanFilename(a.Name)+" ["+dir+"]")
 	croak(os.MkdirAll(working_dir, 0755))
 
 	discs := make(map[int]int)
@@ -513,7 +471,7 @@ func (a *album) Job(dir string, fun jobFun) {
 	cmds := make(chan []*exec.Cmd)
 	var wg sync.WaitGroup
 
-	for i := 0; i < *conc_jobs; i++ {
+	for i := 0; i < Config.ConcurrentJobs; i++ {
 		go func() {
 			wg.Add(1)
 			for cmdList := range cmds {
@@ -534,7 +492,7 @@ func (a *album) Job(dir string, fun jobFun) {
 			sub = fmt.Sprintf("disc_%02d", mf.Disc)
 		}
 		cbn := cleanFilename(mf.Basename)
-		wav := path.Join(*output_dir, "wav", sub, cbn+".wav")
+		wav := path.Join(Config.Seedvault.OutputDir, "wav", sub, cbn+".wav")
 		out := path.Join(working_dir, sub, cbn)
 
 		cmds <- fun(mf, wav, out)
@@ -542,58 +500,57 @@ func (a *album) Job(dir string, fun jobFun) {
 
 	close(cmds)
 
-	if *cover_image != "" {
-		err := zm.CopyTo(*cover_image, path.Join(working_dir, "folder.jpg"))
+	if Config.Seedvault.CoverImage != "" {
+		err := zm.CopyTo(Config.Seedvault.CoverImage, path.Join(working_dir, "folder.jpg"))
 		if err != nil {
 			log.Print(err)
 		}
 	}
 
-	if *inlay_image != "" {
-		err := zm.CopyTo(*inlay_image, path.Join(working_dir, "inlay.jpg"))
+	if Config.Seedvault.InlayImage != "" {
+		err := zm.CopyTo(Config.Seedvault.InlayImage, path.Join(working_dir, "inlay.jpg"))
 		if err != nil {
 			log.Print(err)
 		}
 	}
 
-	if *booklet != "" {
-		err := zm.CopyTo(*booklet, path.Join(working_dir, "booklet.pdf"))
+	if Config.Seedvault.Booklet != "" {
+		err := zm.CopyTo(Config.Seedvault.Booklet, path.Join(working_dir, "booklet.pdf"))
 		if err != nil {
 			log.Print(err)
 		}
 	}
 
 	// Add any additional files to the root dir
-	args := flag.Args()
-	for _, f := range args {
+	for _, f := range a.AdditionalFiles {
 		err := zm.CopyTo(f, path.Join(working_dir, path.Base(f)))
 		if err != nil {
 			log.Print(err)
 		}
 	}
 
-	if *cuesheet != "" {
+	if Config.Seedvault.Cuesheet != "" {
 		for _, d := range a.Discs {
 			sd, dd := "", ""
 			if d != 0 {
 				sd = fmt.Sprintf("disc_%02d", d)
 				dd = fmt.Sprintf("disc_%02d", d)
 			}
-			err := zm.CopyTo(path.Join(sd, *cuesheet), path.Join(working_dir, dd, "cuesheet.cue"))
+			err := zm.CopyTo(path.Join(sd, Config.Seedvault.Cuesheet), path.Join(working_dir, dd, "cuesheet.cue"))
 			if err != nil {
 				log.Print(err)
 			}
 		}
 	}
 
-	if *eac_logfile != "" {
+	if Config.Seedvault.EACLogfile != "" {
 		for _, d := range a.Discs {
 			sd, dd := "", ""
 			if d != 0 {
 				sd = fmt.Sprintf("disc_%02d", d)
 				dd = fmt.Sprintf("disc_%02d", d)
 			}
-			err := zm.CopyTo(path.Join(sd, *eac_logfile), path.Join(working_dir, dd, "eac.log"))
+			err := zm.CopyTo(path.Join(sd, Config.Seedvault.EACLogfile), path.Join(working_dir, dd, "eac.log"))
 			if err != nil {
 				log.Print(err)
 			}
@@ -602,9 +559,9 @@ func (a *album) Job(dir string, fun jobFun) {
 
 	wg.Wait()
 
-	if *tracker_url != "" {
-		// working_dir := path.Join(*output_dir, a.Name+" ["+dir+"]")
-		cmd := exec.Command("mktorrent", "-a", *tracker_url, "-p", working_dir, "-o", working_dir+".torrent")
+	if Config.Seedvault.Tracker != "" {
+		// working_dir := path.Join(Config.Seedvault.OutputDir, a.Name+" ["+dir+"]")
+		cmd := exec.Command("mktorrent", "-a", Config.Seedvault.Tracker, "-p", working_dir, "-o", working_dir+".torrent")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Start()
