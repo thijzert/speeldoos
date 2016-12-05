@@ -231,6 +231,9 @@ func seedvault_main(argv []string) {
 				fileTitle = fmt.Sprintf("%s - %d. %s", title, i+1, pf.Work.Parts[i])
 			}
 			out := fmt.Sprintf("%02d - %s - %s", track_counter, pf.Work.Composer.Name, fileTitle)
+			if pf.Work.Composer.Name == "" {
+				out = fmt.Sprintf("%02d - %s", track_counter, fileTitle)
+			}
 
 			mm := &mFile{
 				Basename:   out,
@@ -588,8 +591,10 @@ func id3tags(s *mFile, mp3 string) *exec.Cmd {
 	args := []string{
 		"-t", s.Title,
 		"-a", s.Artist,
-		"--TCOM", s.Composer,
 		"--genre", "32", // FIXME
+	}
+	if s.Composer != "" {
+		args = append(args, "--TCOM", s.Composer)
 	}
 	if s.Album != "" {
 		args = append(args, "-A", s.Album)
@@ -633,7 +638,9 @@ func metaflac(mm *mFile, flac string) *exec.Cmd {
 		writeFlacTag(pipeIn, "discnumber", fmt.Sprintf("%d", mm.Disc))
 	}
 	writeFlacTag(pipeIn, "tracknumber", fmt.Sprintf("%d", mm.Track))
-	writeFlacTag(pipeIn, "composer", mm.Composer)
+	if mm.Composer != "" {
+		writeFlacTag(pipeIn, "composer", mm.Composer)
+	}
 	if mm.Conductor != "" {
 		writeFlacTag(pipeIn, "conductor", mm.Conductor)
 	}
