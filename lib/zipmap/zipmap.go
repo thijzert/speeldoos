@@ -75,7 +75,7 @@ func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
 		zipfile := filepath.Join(elems[0 : i+1]...)
 		read, ok := z.zips[zipfile]
 		if !ok {
-			log.Printf("Opening zip file %s...\n", zipfile)
+			// log.Printf("Opening zip file %s...\n", zipfile)
 			read, err = zip.OpenReader(zipfile)
 			if err != nil {
 				log.Print(err)

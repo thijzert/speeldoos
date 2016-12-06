@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 )
@@ -32,11 +33,17 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 
 	discs := make(map[int]int)
+	ccp := &commonPath{}
 	for _, pf := range carrier.Performances {
 		for _, sf := range pf.SourceFiles {
 			discs[sf.Disc] = sf.Disc
+			ccp.Add(sf.Disc, sf.Filename)
 		}
 	}
+
+	Config.Seedvault.CoverImage, _ = ccp.FindOne(Config.Seedvault.CoverImage, "cover.jpg", "cover.jpeg", "folder.jpg")
+	Config.Seedvault.InlayImage, _ = ccp.FindOne(Config.Seedvault.InlayImage, "inlay.jpg", "inlay.jpeg", "back.jpg")
+	Config.Seedvault.Booklet, _ = ccp.FindOne(Config.Seedvault.Booklet, "booklet.pdf")
 
 	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(Config.Seedvault.CoverImage), Config.Seedvault.CoverImage)
 	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(Config.Seedvault.InlayImage), Config.Seedvault.InlayImage)
@@ -130,6 +137,50 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 
 	return carrier
+}
+
+type commonPath struct {
+	all   string
+	discs map[int]string
+}
+
+func (cp *commonPath) Add(disc int, sourcefile string) {
+	if cp.discs == nil {
+		cp.all = sourcefile
+		cp.discs = make(map[int]string)
+	} else {
+		if len(cp.all) > len(sourcefile) {
+			cp.all = cp.all[:len(sourcefile)]
+		}
+		for cp.all != sourcefile[:len(cp.all)] {
+			cp.all = cp.all[:len(cp.all)-1]
+		}
+	}
+	if _, ok := cp.discs[disc]; !ok {
+		cp.discs[disc] = sourcefile
+	} else {
+		if len(cp.discs[disc]) > len(sourcefile) {
+			cp.discs[disc] = cp.discs[disc][:len(sourcefile)]
+		}
+		for cp.discs[disc] != sourcefile[:len(cp.discs[disc])] {
+			cp.discs[disc] = cp.discs[disc][:len(cp.discs[disc])-1]
+		}
+	}
+}
+
+func (cp *commonPath) FindOne(names ...string) (rv string, exists bool) {
+	for _, nn := range names {
+		ss := filepath.SplitList(cp.all)
+		ss = append(ss, "")
+		for i := len(ss); i > 0; i-- {
+			ss[i-1] = nn
+			p := path.Join(ss[:i]...)
+			if zm.Exists(p) {
+				return p, true
+			}
+		}
+	}
+	return names[0], false
 }
 
 func checkFileExists(filename string) string {
