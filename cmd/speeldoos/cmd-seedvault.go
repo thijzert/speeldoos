@@ -45,6 +45,9 @@ func confirmSettings() *speeldoos.Carrier {
 	Config.Seedvault.InlayImage, _ = ccp.FindOne(Config.Seedvault.InlayImage, "inlay.jpg", "inlay.jpeg", "back.jpg")
 	Config.Seedvault.Booklet, _ = ccp.FindOne(Config.Seedvault.Booklet, "booklet.pdf")
 
+	Config.Seedvault.EACLogfile, _ = ccp.FindAllDiscs(Config.Seedvault.EACLogfile, "eac.log", "rip.log")
+	Config.Seedvault.Cuesheet, _ = ccp.FindAllDiscs(Config.Seedvault.Cuesheet, "cuesheet.cue")
+
 	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(Config.Seedvault.CoverImage), Config.Seedvault.CoverImage)
 	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(Config.Seedvault.InlayImage), Config.Seedvault.InlayImage)
 	fmt.Printf("Booklet file: %s %s\n", checkFileExists(Config.Seedvault.Booklet), Config.Seedvault.Booklet)
@@ -178,6 +181,26 @@ func (cp *commonPath) FindOne(names ...string) (rv string, exists bool) {
 			if zm.Exists(p) {
 				return p, true
 			}
+		}
+	}
+	return names[0], false
+}
+
+func (cp *commonPath) FindAllDiscs(names ...string) (string, bool) {
+	for _, nn := range names {
+		exists := true
+		for d, _ := range cp.discs {
+			sub := ""
+			if d > 0 {
+				sub = fmt.Sprintf("disc_%02d", d)
+			}
+			if !zm.Exists(path.Join(cp.all, sub, nn)) {
+				exists = false
+				break
+			}
+		}
+		if exists {
+			return path.Join(cp.all, nn), true
 		}
 	}
 	return names[0], false
@@ -588,12 +611,14 @@ func (a *album) Job(dir string, fun jobFun) {
 
 	if Config.Seedvault.Cuesheet != "" {
 		for _, d := range a.Discs {
+			source_dir := filepath.Dir(Config.Seedvault.Cuesheet)
+			source_file := filepath.Base(Config.Seedvault.Cuesheet)
 			sd, dd := "", ""
 			if d != 0 {
 				sd = fmt.Sprintf("disc_%02d", d)
 				dd = fmt.Sprintf("disc_%02d", d)
 			}
-			err := zm.CopyTo(path.Join(sd, Config.Seedvault.Cuesheet), path.Join(working_dir, dd, "cuesheet.cue"))
+			err := zm.CopyTo(path.Join(source_dir, sd, source_file), path.Join(working_dir, dd, "cuesheet.cue"))
 			if err != nil {
 				log.Print(err)
 			}
@@ -602,12 +627,14 @@ func (a *album) Job(dir string, fun jobFun) {
 
 	if Config.Seedvault.EACLogfile != "" {
 		for _, d := range a.Discs {
+			source_dir := filepath.Dir(Config.Seedvault.EACLogfile)
+			source_file := filepath.Base(Config.Seedvault.EACLogfile)
 			sd, dd := "", ""
 			if d != 0 {
 				sd = fmt.Sprintf("disc_%02d", d)
 				dd = fmt.Sprintf("disc_%02d", d)
 			}
-			err := zm.CopyTo(path.Join(sd, Config.Seedvault.EACLogfile), path.Join(working_dir, dd, "eac.log"))
+			err := zm.CopyTo(path.Join(source_dir, sd, source_file), path.Join(working_dir, dd, "eac.log"))
 			if err != nil {
 				log.Print(err)
 			}
