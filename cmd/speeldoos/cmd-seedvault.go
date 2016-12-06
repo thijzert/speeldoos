@@ -194,7 +194,7 @@ func seedvault_main(argv []string) {
 		albus.Discs = append(albus.Discs, d)
 	}
 
-	croak(os.Mkdir(Config.Seedvault.OutputDir, 0755))
+	croak(os.MkdirAll(Config.Seedvault.OutputDir, 0755))
 	croak(os.Mkdir(path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name)+" [FLAC]"), 0755))
 
 	last_bps := 0
@@ -395,6 +395,9 @@ func seedvault_main(argv []string) {
 
 		bar.Write(path.Join(Config.Seedvault.OutputDir, archive_name+".xml"))
 	}
+
+	// Delete temporary wav/ dir
+	croak(os.RemoveAll(path.Join(Config.Seedvault.OutputDir, "wav")))
 }
 
 func cleanFilename(value string) string {
