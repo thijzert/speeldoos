@@ -45,55 +45,19 @@ func confirmSettings() *speeldoos.Carrier {
 	Config.Seedvault.InlayImage, _ = ccp.FindOne(Config.Seedvault.InlayImage, "inlay.jpg", "inlay.jpeg", "back.jpg")
 	Config.Seedvault.Booklet, _ = ccp.FindOne(Config.Seedvault.Booklet, "booklet.pdf")
 
-	Config.Seedvault.EACLogfile, _ = ccp.FindAllDiscs(Config.Seedvault.EACLogfile, "eac.log", "rip.log")
-	Config.Seedvault.Cuesheet, _ = ccp.FindAllDiscs(Config.Seedvault.Cuesheet, "cuesheet.cue")
+	var logfile_exists, cuesheet_exists bool
+	Config.Seedvault.EACLogfile, logfile_exists = ccp.FindAllDiscs(Config.Seedvault.EACLogfile, "eac.log", "rip.log")
+	Config.Seedvault.Cuesheet, cuesheet_exists = ccp.FindAllDiscs(Config.Seedvault.Cuesheet, "cuesheet.cue")
 
 	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(Config.Seedvault.CoverImage), Config.Seedvault.CoverImage)
 	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(Config.Seedvault.InlayImage), Config.Seedvault.InlayImage)
 	fmt.Printf("Booklet file: %s %s\n", checkFileExists(Config.Seedvault.Booklet), Config.Seedvault.Booklet)
 
-	logfile_exists, cuesheet_exists := true, true
-
 	if len(discs) > 1 {
-		fmt.Printf("Discs:       ")
-		for d, _ := range discs {
-			fmt.Printf("% 3d", d)
-		}
-		fmt.Printf("\n")
+		fmt.Printf("Discs:       %s\n", ccp.DiscPrefixes())
 
-		fmt.Printf("EAC log file: ")
-		if Config.Seedvault.EACLogfile == "" {
-			fmt.Printf("%s\n", checkFileExists(""))
-		} else {
-			for d, _ := range discs {
-				sub := ""
-				if d > 0 {
-					sub = fmt.Sprintf("disc_%02d", d)
-				}
-				fmt.Printf("%s  ", checkFileExists(path.Join(sub, Config.Seedvault.EACLogfile)))
-				if !zm.Exists(path.Join(sub, Config.Seedvault.EACLogfile)) {
-					logfile_exists = false
-				}
-			}
-			fmt.Printf("%s\n", Config.Seedvault.EACLogfile)
-		}
-
-		fmt.Printf("Cue sheet:    ")
-		if Config.Seedvault.Cuesheet == "" {
-			fmt.Printf("%s\n", checkFileExists(""))
-		} else {
-			for d, _ := range discs {
-				sub := ""
-				if d > 0 {
-					sub = fmt.Sprintf("disc_%02d", d)
-				}
-				fmt.Printf("%s  ", checkFileExists(path.Join(sub, Config.Seedvault.Cuesheet)))
-				if !zm.Exists(path.Join(sub, Config.Seedvault.Cuesheet)) {
-					cuesheet_exists = false
-				}
-			}
-			fmt.Printf("%s\n", Config.Seedvault.Cuesheet)
-		}
+		fmt.Printf("EAC log file: %s\n", ccp.CheckDiscFileExists(Config.Seedvault.EACLogfile))
+		fmt.Printf("Cue sheet:    %s\n", ccp.CheckDiscFileExists(Config.Seedvault.Cuesheet))
 	} else {
 		fmt.Printf("EAC log file: %s %s\n", checkFileExists(Config.Seedvault.EACLogfile), Config.Seedvault.EACLogfile)
 		fmt.Printf("Cue sheet:    %s %s\n", checkFileExists(Config.Seedvault.Cuesheet), Config.Seedvault.Cuesheet)
@@ -173,14 +137,16 @@ func (cp *commonPath) Add(disc int, sourcefile string) {
 
 func (cp *commonPath) FindOne(names ...string) (rv string, exists bool) {
 	for _, nn := range names {
-		ss := filepath.SplitList(cp.all)
-		ss = append(ss, "")
-		for i := len(ss); i > 0; i-- {
-			ss[i-1] = nn
-			p := path.Join(ss[:i]...)
+		ss := cp.all
+		for ss != "." && ss != string(filepath.Separator) {
+			p := path.Join(ss, nn)
 			if zm.Exists(p) {
 				return p, true
 			}
+			ss = filepath.Dir(ss)
+		}
+		if zm.Exists(nn) {
+			return nn, true
 		}
 	}
 	return names[0], false
@@ -188,22 +154,71 @@ func (cp *commonPath) FindOne(names ...string) (rv string, exists bool) {
 
 func (cp *commonPath) FindAllDiscs(names ...string) (string, bool) {
 	for _, nn := range names {
-		exists := true
-		for d, _ := range cp.discs {
-			sub := ""
-			if d > 0 {
-				sub = fmt.Sprintf("disc_%02d", d)
+		ss := cp.all
+		for ss != "." && ss != string(filepath.Separator) {
+			if cp.existsForEachDisc(ss, nn) {
+				return path.Join(ss, nn), true
 			}
-			if !zm.Exists(path.Join(cp.all, sub, nn)) {
-				exists = false
-				break
-			}
+			ss = filepath.Dir(ss)
 		}
-		if exists {
-			return path.Join(cp.all, nn), true
+		if cp.existsForEachDisc("", nn) {
+			return nn, true
 		}
 	}
 	return names[0], false
+}
+
+func (cp *commonPath) existsForEachDisc(dir, file string) bool {
+	for d, _ := range cp.discs {
+		sub := ""
+		if d > 0 {
+			sub = fmt.Sprintf("disc_%02d", d)
+		}
+		if !zm.Exists(path.Join(dir, sub, file)) {
+			return false
+		}
+	}
+	return true
+}
+
+func (cp *commonPath) DiscPrefixes() string {
+	if len(cp.discs) <= 1 {
+		return ""
+	}
+	rv := ""
+	for d, _ := range cp.discs {
+		rv += fmt.Sprintf("% 3d", d)
+	}
+	return rv
+}
+
+func (cp *commonPath) CheckDiscFileExists(file string) string {
+	if file == "" {
+		return checkFileExists("")
+	}
+
+	dir := filepath.Dir(file)
+	file = filepath.Base(file)
+
+	rv := ""
+
+	for d, _ := range cp.discs {
+		sub := ""
+		if d > 0 {
+			sub = fmt.Sprintf("disc_%02d", d)
+		}
+		rv += checkFileExists(path.Join(dir, sub, file)) + "  "
+	}
+
+	if dir != "" {
+		if len(cp.discs) > 1 {
+			file = path.Join(dir, "*", file)
+		} else {
+			file = path.Join(dir, file)
+		}
+	}
+
+	return rv + file
 }
 
 func checkFileExists(filename string) string {
