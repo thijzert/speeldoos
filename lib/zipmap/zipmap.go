@@ -26,6 +26,7 @@ package zipmap
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -96,10 +97,10 @@ func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
 			}
 		}
 
-		return rv, os.ErrNotExist
+		return rv, fmt.Errorf("File '%s' does not exist in '%s'", localfile, zipfile) // os.ErrNotExist
 	}
 
-	return rv, os.ErrNotExist
+	return rv, fmt.Errorf("File '%s' does not exist", filename) // os.ErrNotExist
 }
 
 func (z *ZipMap) CopyTo(filename, destination string) error {
