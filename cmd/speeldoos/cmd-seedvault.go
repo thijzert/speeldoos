@@ -499,6 +499,10 @@ func cleanFilename(value string) string {
 	value = strings.Replace(value, ":", "", -1)
 	value = strings.Replace(value, "?", "", -1)
 	value = strings.Replace(value, "!", "", -1)
+	value = strings.Replace(value, "*", "-", -1)
+	value = strings.Replace(value, "<", "-", -1)
+	value = strings.Replace(value, ">", "-", -1)
+	value = strings.Replace(value, "|", "-", -1)
 	value = strings.Replace(value, "/", "-", -1)
 	value = strings.Replace(value, "\\", "-", -1)
 
