@@ -1,1 +1,0 @@
-../../vendor/jquery.xmleditor/lib/ace/src-min/theme-textmate.js

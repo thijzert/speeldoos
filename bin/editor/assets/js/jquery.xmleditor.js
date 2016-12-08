@@ -1,1 +1,0 @@
-../../vendor/jquery.xmleditor/jquery.xmleditor.js

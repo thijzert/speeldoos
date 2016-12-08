@@ -1,1 +1,0 @@
-../../vendor/jquery.xmleditor/lib/ace/src-min/mode-xml.js

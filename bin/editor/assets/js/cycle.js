@@ -1,1 +1,0 @@
-../../vendor/jquery.xmleditor/lib/cycle.js
