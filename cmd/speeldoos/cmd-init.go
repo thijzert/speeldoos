@@ -10,6 +10,15 @@ import (
 	"strings"
 )
 
+var defaultIndexNames = map[string]string{
+	"Carl Philipp Emanuel Bach": "Wq",
+	"Dieterich Buxtehude":       "BuxWV",
+	"Franz Schubert":            "D",
+	"Georg Philipp Telemann":    "TWV",
+	"Johann Sebastian Bach":     "BWV",
+	"Wolfgang Amadeus Mozart":   "K",
+}
+
 func init_main(args []string) {
 	if len(args) == 0 {
 		croak(fmt.Errorf("Specify at least one number of parts"))
@@ -59,6 +68,8 @@ func init_main(args []string) {
 	foo.Source = "2222"
 	foo.Performances = make([]speeldoos.Performance, 0, len(args))
 
+	indexName := defaultIndexNames[Config.Init.Composer]
+
 	disc_index := 0
 	track_counter := 1
 
@@ -67,7 +78,7 @@ func init_main(args []string) {
 			Work: speeldoos.Work{
 				Composer:   speeldoos.Composer{Name: Config.Init.Composer, ID: strings.Replace(Config.Init.Composer, " ", "_", -1)},
 				Title:      []speeldoos.Title{speeldoos.Title{"2222", ""}},
-				OpusNumber: []speeldoos.OpusNumber{speeldoos.OpusNumber{Number: "2222"}},
+				OpusNumber: []speeldoos.OpusNumber{speeldoos.OpusNumber{IndexName: indexName, Number: "2222"}},
 				Year:       2222,
 			},
 			Year:        Config.Init.Year,
