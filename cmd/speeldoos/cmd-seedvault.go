@@ -391,7 +391,7 @@ func seedvault_main(argv []string) {
 		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
 			flac := out + ".flac"
 			return []*exec.Cmd{
-				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+				exec.Command(Config.Tools.Flac, "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
 			}
 		})
@@ -402,8 +402,9 @@ func seedvault_main(argv []string) {
 		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
 		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
 			flac := out + ".flac"
+			fmt.Printf("%s %s %s %s '%s' '%s'\n", Config.Tools.Flac, "-d", "-s", "-o", wav, flac)
 			return []*exec.Cmd{
-				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+				exec.Command(Config.Tools.Flac, "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
 			}
 		})
@@ -681,7 +682,7 @@ func lameRun(extraArgs ...string) jobFun {
 		cmdline = append(cmdline, wav, mp3)
 
 		return []*exec.Cmd{
-			exec.Command("lame", cmdline...),
+			exec.Command(Config.Tools.Lame, cmdline...),
 			id3tags(s, mp3),
 		}
 	}
@@ -723,7 +724,7 @@ func id3tags(s *mFile, mp3 string) *exec.Cmd {
 }
 
 func metaflac(mm *mFile, flac string) *exec.Cmd {
-	cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
+	cmd := exec.Command(Config.Tools.Metaflac, "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cecinestpas, err := cmd.StdinPipe()
@@ -762,7 +763,7 @@ type bitness struct {
 }
 
 func (b *bitness) Check(file string) int {
-	cmd := exec.Command("metaflac", "--show-bps", file)
+	cmd := exec.Command(Config.Tools.Metaflac, "--show-bps", file)
 	cmd.Stderr = os.Stderr
 	cecinestpas, err := cmd.StdoutPipe()
 	croak(err)
