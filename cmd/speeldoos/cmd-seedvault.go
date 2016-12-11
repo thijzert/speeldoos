@@ -388,9 +388,9 @@ func seedvault_main(argv []string) {
 
 		log.Printf("Decoding to 16-bit WAV...")
 		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
-		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
+		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []runner {
 			flac := out + ".flac"
-			return []*exec.Cmd{
+			return []runner{
 				exec.Command(Config.Tools.Flac, "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
 			}
@@ -400,19 +400,18 @@ func seedvault_main(argv []string) {
 	} else if Config.Seedvault.DV2 || Config.Seedvault.DV0 || Config.Seedvault.D320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
-		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []runner {
 			flac := out + ".flac"
-			fmt.Printf("%s %s %s %s '%s' '%s'\n", Config.Tools.Flac, "-d", "-s", "-o", wav, flac)
-			return []*exec.Cmd{
+			return []runner{
 				exec.Command(Config.Tools.Flac, "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
 			}
 		})
 		log.Printf("Done decoding.")
 	} else {
-		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []runner {
 			flac := out + ".flac"
-			return []*exec.Cmd{
+			return []runner{
 				metaflac(mf, flac),
 			}
 		})
@@ -525,7 +524,17 @@ func writeFlacTag(f io.Writer, key, value string) {
 	f.Write([]byte(d))
 }
 
-type jobFun func(*mFile, string, string) []*exec.Cmd
+type runner interface {
+	Run() error
+}
+
+type funFunc func() error
+
+func (r funFunc) Run() error {
+	return r()
+}
+
+type jobFun func(*mFile, string, string) []runner
 
 type mFile struct {
 	Basename                                string
@@ -568,18 +577,23 @@ func (a *album) Job(dir string, fun jobFun) {
 		}
 	}
 
-	cmds := make(chan []*exec.Cmd)
+	cmds := make(chan []runner)
 	var wg sync.WaitGroup
 
 	for i := 0; i < Config.ConcurrentJobs; i++ {
 		go func() {
 			wg.Add(1)
 			for cmdList := range cmds {
-				for _, cmd := range cmdList {
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					cmd.Start()
-					croak(cmd.Wait())
+				for _, toRun := range cmdList {
+					if cmd, ok := toRun.(*exec.Cmd); ok {
+						log.Printf("%s [%s]", cmd.Path, cmd.Args)
+						cmd.Stdout = os.Stdout
+						cmd.Stderr = os.Stderr
+						cmd.Start()
+						croak(cmd.Wait())
+					} else {
+						croak(toRun.Run())
+					}
 				}
 			}
 			wg.Done()
@@ -674,14 +688,14 @@ func (a *album) Job(dir string, fun jobFun) {
 }
 
 func lameRun(extraArgs ...string) jobFun {
-	return func(s *mFile, wav, out string) []*exec.Cmd {
+	return func(s *mFile, wav, out string) []runner {
 		mp3 := out + ".mp3"
 		cmdline := []string{"--quiet", "--replaygain-accurate", "--id3v2-only"}
 
 		cmdline = append(cmdline, extraArgs...)
 		cmdline = append(cmdline, wav, mp3)
 
-		return []*exec.Cmd{
+		return []runner{
 			exec.Command(Config.Tools.Lame, cmdline...),
 			id3tags(s, mp3),
 		}
@@ -725,8 +739,6 @@ func id3tags(s *mFile, mp3 string) *exec.Cmd {
 
 func metaflac(mm *mFile, flac string) *exec.Cmd {
 	cmd := exec.Command(Config.Tools.Metaflac, "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	cecinestpas, err := cmd.StdinPipe()
 	croak(err)
 
