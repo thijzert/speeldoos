@@ -15,11 +15,23 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 )
 
 var zm = zipmap.New()
+
+var (
+	checkmark = "\u2713"
+)
+
+func init() {
+	// The '✓' glyph does not currently display correctly in PowerShell.
+	if runtime.GOOS == "windows" {
+		checkmark = "Y"
+	}
+}
 
 func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("\nAbout to start an encode with the following settings:\n")
@@ -227,7 +239,7 @@ func checkFileExists(filename string) string {
 	}
 
 	if zm.Exists(filename) {
-		return tc.Green("\u2713")
+		return tc.Green(checkmark)
 	}
 
 	return tc.Red("not found")
