@@ -720,7 +720,7 @@ func id3tags(s *mFile, mp3 string) *exec.Cmd {
 
 	args = append(args, mp3)
 
-	return exec.Command("id3v2", args...)
+	return exec.Command(Config.Tools.ID3v2, args...)
 }
 
 func metaflac(mm *mFile, flac string) *exec.Cmd {

@@ -16,6 +16,7 @@ var Config = struct {
 	Tools          struct {
 		Flac, Metaflac string
 		Lame           string
+		ID3v2          string
 	}
 	Extract struct {
 		Bitrate string
@@ -54,6 +55,7 @@ func init() {
 	cmdline.StringVar(&Config.Tools.Flac, "tools.flac", "", "Path to `flac`")
 	cmdline.StringVar(&Config.Tools.Metaflac, "tools.metaflac", "", "Path to `metaflac`")
 	cmdline.StringVar(&Config.Tools.Lame, "tools.lame", "", "Path to `lame`")
+	cmdline.StringVar(&Config.Tools.ID3v2, "tools.id3v2", "", "Path to `id3v2`")
 
 	// }}}
 	// Settings for `sd extract` {{{
@@ -139,6 +141,9 @@ func init() {
 	}
 	if Config.Tools.Lame == "" {
 		Config.Tools.Lame = "lame"
+	}
+	if Config.Tools.ID3v2 == "" {
+		Config.Tools.ID3v2 = "id3v2"
 	}
 
 	if Config.ConcurrentJobs < 1 {
