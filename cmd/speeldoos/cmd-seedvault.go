@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"crypto/sha256"
@@ -460,22 +461,21 @@ func seedvault_main(argv []string) {
 	}
 
 	if Config.Seedvault.DArchive {
+		log.Printf("Creating speeldoos archive...")
 		source_dir := " [FLAC]"
 		if last_bps > 16 {
 			source_dir = fmt.Sprintf(" [FLAC%d]", last_bps)
 		}
+		source_dir = cleanFilename(albus.Name) + source_dir
+
 		archive_name := foo.ID
 		if archive_name == "" {
 			archive_name = "speeldoos"
 		}
 		archive_name = cleanFilename(archive_name)
 		archive_name = strings.Replace(archive_name, " ", "-", -1)
-		c := exec.Command("zip", "--quiet", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
-		c.Dir = path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name)+source_dir)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		c.Start()
-		croak(c.Wait())
+
+		croak(zipit(path.Join(Config.Seedvault.OutputDir, source_dir), path.Join(Config.Seedvault.OutputDir, archive_name+".zip")))
 
 		bar, err := speeldoos.ImportCarrier(Config.Seedvault.InputXml)
 		croak(err)
@@ -501,6 +501,8 @@ func seedvault_main(argv []string) {
 		}
 
 		bar.Write(path.Join(Config.Seedvault.OutputDir, archive_name+".xml"))
+
+		log.Printf("Done.")
 	}
 
 	// Delete temporary wav/ dir
@@ -828,4 +830,69 @@ func (b *bitness) Consistent() error {
 	}
 
 	return fmt.Errorf("Inconsistent bit depth across source files: I've seen %s", rv[2:])
+}
+
+// Source: https://gist.github.com/svett/424e6784facc0ba907ae
+func zipit(source, target string) error {
+	zipfile, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer zipfile.Close()
+
+	archive := zip.NewWriter(zipfile)
+	defer archive.Close()
+
+	info, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	var baseDir string
+	if info.IsDir() {
+		// baseDir = filepath.Base(source)
+	}
+
+	filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == source {
+			return nil
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+
+		if baseDir != "" {
+			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
+		}
+
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Store
+		}
+
+		writer, err := archive.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(writer, file)
+		return err
+	})
+
+	return err
 }
