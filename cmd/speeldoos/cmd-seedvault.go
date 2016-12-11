@@ -149,6 +149,9 @@ func (cp *commonPath) Add(disc int, sourcefile string) {
 
 func (cp *commonPath) FindOne(names ...string) (rv string, exists bool) {
 	for _, nn := range names {
+		if nn == "" {
+			continue
+		}
 		ss := cp.all
 		for ss != "." && ss != string(filepath.Separator) {
 			p := path.Join(ss, nn)
@@ -181,6 +184,9 @@ func (cp *commonPath) FindAllDiscs(names ...string) (string, bool) {
 }
 
 func (cp *commonPath) existsForEachDisc(dir, file string) bool {
+	if file == "" {
+		return false
+	}
 	for d, _ := range cp.discs {
 		sub := ""
 		if d > 0 {
