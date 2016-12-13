@@ -32,6 +32,8 @@ Afterwards (you may need to restart your shell first), use the `sd` (or `speeldo
     sd grep wohltemperirte
     sd init --composer="Johann Sebastian Bach" 48
 
+On Windows, I don't know yet.
+
 Usage
 -----
 Speeldoos consists of several subcommands, the most important of which are outlined below

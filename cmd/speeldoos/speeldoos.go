@@ -13,7 +13,12 @@ var Config = struct {
 	Subcommand     string
 	ConcurrentJobs int
 	LibraryDir     string
-	Extract        struct {
+	Tools          struct {
+		Flac, Metaflac string
+		Lame           string
+		ID3v2          string
+	}
+	Extract struct {
 		Bitrate string
 	}
 	Grep struct {
@@ -44,6 +49,13 @@ func init() {
 	// Global settings {{{
 	cmdline.IntVar(&Config.ConcurrentJobs, "j", 2, "Number of concurrent jobs")
 	cmdline.StringVar(&Config.LibraryDir, "library_dir", ".", "Search speeldoos files in this directory")
+
+	// }}}
+	// External tools {{{
+	cmdline.StringVar(&Config.Tools.Flac, "tools.flac", "", "Path to `flac`")
+	cmdline.StringVar(&Config.Tools.Metaflac, "tools.metaflac", "", "Path to `metaflac`")
+	cmdline.StringVar(&Config.Tools.Lame, "tools.lame", "", "Path to `lame`")
+	cmdline.StringVar(&Config.Tools.ID3v2, "tools.id3v2", "", "Path to `id3v2`")
 
 	// }}}
 	// Settings for `sd extract` {{{
@@ -120,6 +132,19 @@ func init() {
 	}
 
 	// Sanity checks
+
+	if Config.Tools.Flac == "" {
+		Config.Tools.Flac = "flac"
+	}
+	if Config.Tools.Metaflac == "" {
+		Config.Tools.Metaflac = "metaflac"
+	}
+	if Config.Tools.Lame == "" {
+		Config.Tools.Lame = "lame"
+	}
+	if Config.Tools.ID3v2 == "" {
+		Config.Tools.ID3v2 = "id3v2"
+	}
 
 	if Config.ConcurrentJobs < 1 {
 		Config.ConcurrentJobs = 1

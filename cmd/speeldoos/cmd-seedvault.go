@@ -1,11 +1,14 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/zipmap"
@@ -15,11 +18,24 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 var zm = zipmap.New()
+
+var (
+	checkmark = "\u2713"
+)
+
+func init() {
+	// The '✓' glyph does not currently display correctly in PowerShell.
+	if runtime.GOOS == "windows" {
+		checkmark = "Y"
+	}
+}
 
 func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("\nAbout to start an encode with the following settings:\n")
@@ -67,7 +83,7 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 
 	if Config.Seedvault.Tracker != "" {
-		fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(Config.Seedvault.Tracker))
+		fmt.Printf("\nURL to private tracker: %s\n", tc.Bwhite(Config.Seedvault.Tracker))
 	}
 
 	fmt.Printf("\nEncodes to run: FLAC    %s\n", yes(true))
@@ -137,6 +153,9 @@ func (cp *commonPath) Add(disc int, sourcefile string) {
 
 func (cp *commonPath) FindOne(names ...string) (rv string, exists bool) {
 	for _, nn := range names {
+		if nn == "" {
+			continue
+		}
 		ss := cp.all
 		for ss != "." && ss != string(filepath.Separator) {
 			p := path.Join(ss, nn)
@@ -169,6 +188,9 @@ func (cp *commonPath) FindAllDiscs(names ...string) (string, bool) {
 }
 
 func (cp *commonPath) existsForEachDisc(dir, file string) bool {
+	if file == "" {
+		return false
+	}
 	for d, _ := range cp.discs {
 		sub := ""
 		if d > 0 {
@@ -227,7 +249,7 @@ func checkFileExists(filename string) string {
 	}
 
 	if zm.Exists(filename) {
-		return tc.Green("\u2713")
+		return tc.Green(checkmark)
 	}
 
 	return tc.Red("not found")
@@ -388,10 +410,10 @@ func seedvault_main(argv []string) {
 
 		log.Printf("Decoding to 16-bit WAV...")
 		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
-		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []*exec.Cmd {
+		albus.Job(fmt.Sprintf("FLAC%d", last_bps), func(mf *mFile, wav, out string) []runner {
 			flac := out + ".flac"
-			return []*exec.Cmd{
-				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+			return []runner{
+				exec.Command(Config.Tools.Flac, "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
 			}
 		})
@@ -400,18 +422,18 @@ func seedvault_main(argv []string) {
 	} else if Config.Seedvault.DV2 || Config.Seedvault.DV0 || Config.Seedvault.D320 {
 		log.Printf("Decoding to WAV...")
 		croak(os.MkdirAll(path.Join(Config.Seedvault.OutputDir, "wav"), 0755))
-		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []runner {
 			flac := out + ".flac"
-			return []*exec.Cmd{
-				exec.Command("flac", "-d", "-s", "-o", wav, flac),
+			return []runner{
+				exec.Command(Config.Tools.Flac, "-d", "-s", "-o", wav, flac),
 				metaflac(mf, flac),
 			}
 		})
 		log.Printf("Done decoding.")
 	} else {
-		albus.Job("FLAC", func(mf *mFile, wav, out string) []*exec.Cmd {
+		albus.Job("FLAC", func(mf *mFile, wav, out string) []runner {
 			flac := out + ".flac"
-			return []*exec.Cmd{
+			return []runner{
 				metaflac(mf, flac),
 			}
 		})
@@ -442,22 +464,21 @@ func seedvault_main(argv []string) {
 	}
 
 	if Config.Seedvault.DArchive {
+		log.Printf("Creating speeldoos archive...")
 		source_dir := " [FLAC]"
 		if last_bps > 16 {
 			source_dir = fmt.Sprintf(" [FLAC%d]", last_bps)
 		}
+		source_dir = cleanFilename(albus.Name) + source_dir
+
 		archive_name := foo.ID
 		if archive_name == "" {
 			archive_name = "speeldoos"
 		}
 		archive_name = cleanFilename(archive_name)
 		archive_name = strings.Replace(archive_name, " ", "-", -1)
-		c := exec.Command("zip", "--quiet", "-r", "-Z", "store", path.Join("..", archive_name+".zip"), ".")
-		c.Dir = path.Join(Config.Seedvault.OutputDir, cleanFilename(albus.Name)+source_dir)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		c.Start()
-		croak(c.Wait())
+
+		croak(zipit(path.Join(Config.Seedvault.OutputDir, source_dir), path.Join(Config.Seedvault.OutputDir, archive_name+".zip")))
 
 		bar, err := speeldoos.ImportCarrier(Config.Seedvault.InputXml)
 		croak(err)
@@ -483,6 +504,8 @@ func seedvault_main(argv []string) {
 		}
 
 		bar.Write(path.Join(Config.Seedvault.OutputDir, archive_name+".xml"))
+
+		log.Printf("Done.")
 	}
 
 	// Delete temporary wav/ dir
@@ -524,7 +547,17 @@ func writeFlacTag(f io.Writer, key, value string) {
 	f.Write([]byte(d))
 }
 
-type jobFun func(*mFile, string, string) []*exec.Cmd
+type runner interface {
+	Run() error
+}
+
+type funFunc func() error
+
+func (r funFunc) Run() error {
+	return r()
+}
+
+type jobFun func(*mFile, string, string) []runner
 
 type mFile struct {
 	Basename                                string
@@ -567,18 +600,22 @@ func (a *album) Job(dir string, fun jobFun) {
 		}
 	}
 
-	cmds := make(chan []*exec.Cmd)
+	cmds := make(chan []runner)
 	var wg sync.WaitGroup
 
 	for i := 0; i < Config.ConcurrentJobs; i++ {
 		go func() {
 			wg.Add(1)
 			for cmdList := range cmds {
-				for _, cmd := range cmdList {
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					cmd.Start()
-					croak(cmd.Wait())
+				for _, toRun := range cmdList {
+					if cmd, ok := toRun.(*exec.Cmd); ok {
+						cmd.Stdout = os.Stdout
+						cmd.Stderr = os.Stderr
+						cmd.Start()
+						croak(cmd.Wait())
+					} else {
+						croak(toRun.Run())
+					}
 				}
 			}
 			wg.Done()
@@ -663,25 +700,20 @@ func (a *album) Job(dir string, fun jobFun) {
 	wg.Wait()
 
 	if Config.Seedvault.Tracker != "" {
-		// working_dir := path.Join(Config.Seedvault.OutputDir, a.Name+" ["+dir+"]")
-		cmd := exec.Command("mktorrent", "-a", Config.Seedvault.Tracker, "-p", working_dir, "-o", working_dir+".torrent")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Start()
-		croak(cmd.Wait())
+		croak(createTorrent(working_dir, working_dir+".torrent", Config.Seedvault.Tracker))
 	}
 }
 
 func lameRun(extraArgs ...string) jobFun {
-	return func(s *mFile, wav, out string) []*exec.Cmd {
+	return func(s *mFile, wav, out string) []runner {
 		mp3 := out + ".mp3"
 		cmdline := []string{"--quiet", "--replaygain-accurate", "--id3v2-only"}
 
 		cmdline = append(cmdline, extraArgs...)
 		cmdline = append(cmdline, wav, mp3)
 
-		return []*exec.Cmd{
-			exec.Command("lame", cmdline...),
+		return []runner{
+			exec.Command(Config.Tools.Lame, cmdline...),
 			id3tags(s, mp3),
 		}
 	}
@@ -719,13 +751,11 @@ func id3tags(s *mFile, mp3 string) *exec.Cmd {
 
 	args = append(args, mp3)
 
-	return exec.Command("id3v2", args...)
+	return exec.Command(Config.Tools.ID3v2, args...)
 }
 
 func metaflac(mm *mFile, flac string) *exec.Cmd {
-	cmd := exec.Command("metaflac", "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd := exec.Command(Config.Tools.Metaflac, "--remove-all-tags", "--no-utf8-convert", "--import-tags-from=-", flac)
 	cecinestpas, err := cmd.StdinPipe()
 	croak(err)
 
@@ -762,7 +792,7 @@ type bitness struct {
 }
 
 func (b *bitness) Check(file string) int {
-	cmd := exec.Command("metaflac", "--show-bps", file)
+	cmd := exec.Command(Config.Tools.Metaflac, "--show-bps", file)
 	cmd.Stderr = os.Stderr
 	cecinestpas, err := cmd.StdoutPipe()
 	croak(err)
@@ -797,4 +827,102 @@ func (b *bitness) Consistent() error {
 	}
 
 	return fmt.Errorf("Inconsistent bit depth across source files: I've seen %s", rv[2:])
+}
+
+// Source: https://gist.github.com/svett/424e6784facc0ba907ae
+func zipit(source, target string) error {
+	zipfile, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer zipfile.Close()
+
+	archive := zip.NewWriter(zipfile)
+	defer archive.Close()
+
+	info, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+
+	var baseDir string
+	if info.IsDir() {
+		// baseDir = filepath.Base(source)
+	}
+
+	filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == source {
+			return nil
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+
+		if baseDir != "" {
+			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
+		}
+
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Store
+		}
+
+		writer, err := archive.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(writer, file)
+		return err
+	})
+
+	return err
+}
+
+func createTorrent(source, target, announce string) error {
+	outf, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer outf.Close()
+
+	mi := metainfo.MetaInfo{
+		AnnounceList: [][]string{[]string{announce}},
+	}
+	mi.SetDefaults()
+	// mi.CreatedBy = "github.com/thijzert/speeldoos"
+	mi.CreationDate = time.Now().Unix()
+	mi.Comment = ""
+
+	private := true
+	info := metainfo.Info{
+		PieceLength: 256 * 1024,
+		Private:     &private,
+	}
+	err = info.BuildFromFilePath(source)
+	if err != nil {
+		return err
+	}
+
+	mi.InfoBytes, err = bencode.Marshal(info)
+	if err != nil {
+		return err
+	}
+
+	return mi.Write(outf)
 }
