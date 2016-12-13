@@ -609,7 +609,6 @@ func (a *album) Job(dir string, fun jobFun) {
 			for cmdList := range cmds {
 				for _, toRun := range cmdList {
 					if cmd, ok := toRun.(*exec.Cmd); ok {
-						log.Printf("%s [%s]", cmd.Path, cmd.Args)
 						cmd.Stdout = os.Stdout
 						cmd.Stderr = os.Stderr
 						cmd.Start()
