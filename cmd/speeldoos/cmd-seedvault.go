@@ -83,7 +83,7 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 
 	if Config.Seedvault.Tracker != "" {
-		fmt.Printf("\nURL to private tracker: %s\n", tc.Blue(Config.Seedvault.Tracker))
+		fmt.Printf("\nURL to private tracker: %s\n", tc.Bwhite(Config.Seedvault.Tracker))
 	}
 
 	fmt.Printf("\nEncodes to run: FLAC    %s\n", yes(true))
