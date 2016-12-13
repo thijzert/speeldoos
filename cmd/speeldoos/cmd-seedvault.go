@@ -7,6 +7,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/zipmap"
@@ -19,6 +21,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 var zm = zipmap.New()
@@ -698,12 +701,7 @@ func (a *album) Job(dir string, fun jobFun) {
 	wg.Wait()
 
 	if Config.Seedvault.Tracker != "" {
-		// working_dir := path.Join(Config.Seedvault.OutputDir, a.Name+" ["+dir+"]")
-		cmd := exec.Command("mktorrent", "-a", Config.Seedvault.Tracker, "-p", working_dir, "-o", working_dir+".torrent")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Start()
-		croak(cmd.Wait())
+		croak(createTorrent(working_dir, working_dir+".torrent", Config.Seedvault.Tracker))
 	}
 }
 
@@ -895,4 +893,37 @@ func zipit(source, target string) error {
 	})
 
 	return err
+}
+
+func createTorrent(source, target, announce string) error {
+	outf, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer outf.Close()
+
+	mi := metainfo.MetaInfo{
+		AnnounceList: [][]string{[]string{announce}},
+	}
+	mi.SetDefaults()
+	// mi.CreatedBy = "github.com/thijzert/speeldoos"
+	mi.CreationDate = time.Now().Unix()
+	mi.Comment = ""
+
+	private := true
+	info := metainfo.Info{
+		PieceLength: 256 * 1024,
+		Private:     &private,
+	}
+	err = info.BuildFromFilePath(source)
+	if err != nil {
+		return err
+	}
+
+	mi.InfoBytes, err = bencode.Marshal(info)
+	if err != nil {
+		return err
+	}
+
+	return mi.Write(outf)
 }
