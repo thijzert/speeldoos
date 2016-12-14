@@ -2,9 +2,9 @@ package speeldoos
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io/ioutil"
 	"os"
-	"fmt"
 )
 
 type Composer struct {
@@ -37,8 +37,13 @@ type Work struct {
 	Composer   Composer
 	Title      []Title
 	OpusNumber []OpusNumber
-	Parts      []string `xml:"Parts>Part,omitempty"`
+	Parts      []Part `xml:"Parts>Part,omitempty"`
 	Year       int
+}
+
+type Part struct {
+	Part   string `xml:",chardata"`
+	Number string `xml:"number,attr,omitempty"`
 }
 
 type Performer struct {

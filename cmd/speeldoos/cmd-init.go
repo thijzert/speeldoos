@@ -104,11 +104,11 @@ func init_main(args []string) {
 		}
 
 		if n > 1 {
-			pf.Work.Parts = make([]string, n)
+			pf.Work.Parts = make([]speeldoos.Part, n)
 		}
 		for j := 0; j < n; j++ {
 			if n > 1 {
-				pf.Work.Parts[j] = "2222"
+				pf.Work.Parts[j].Part = "2222"
 			}
 			if len(discsize) > 1 {
 				pf.SourceFiles[j] = speeldoos.SourceFile{

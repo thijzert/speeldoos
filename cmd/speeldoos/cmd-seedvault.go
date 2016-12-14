@@ -328,6 +328,15 @@ func seedvault_main(argv []string) {
 			continue
 		}
 
+		// See if the parts are numbered explicitly
+		explicit_numbering := false
+		for _, part := range pf.Work.Parts {
+			if part.Number != "" {
+				explicit_numbering = true
+				break
+			}
+		}
+
 		for i, sf := range pf.SourceFiles {
 			fn := sf.Filename
 			track_counter++
@@ -339,7 +348,16 @@ func seedvault_main(argv []string) {
 
 			fileTitle := title
 			if len(pf.Work.Parts) > 1 && len(pf.Work.Parts) > i {
-				fileTitle = fmt.Sprintf("%s - %d. %s", title, i+1, pf.Work.Parts[i])
+				part := pf.Work.Parts[i]
+				if explicit_numbering {
+					if part.Number == "" {
+						fileTitle = fmt.Sprintf("%s - %s", title, part.Part)
+					} else {
+						fileTitle = fmt.Sprintf("%s - %s. %s", title, part.Number, part.Part)
+					}
+				} else {
+					fileTitle = fmt.Sprintf("%s - %d. %s", title, i+1, part.Part)
+				}
 			}
 			out := fmt.Sprintf("%02d - %s - %s", track_counter, pf.Work.Composer.Name, fileTitle)
 			if pf.Work.Composer.Name == "" {

@@ -71,7 +71,7 @@ func grep_main(args []string) {
 					fmt.Printf("\n")
 				}
 				for i, pp := range ipp.Perf.Work.Parts {
-					fmt.Printf("   %3d  %s\n", i+1, matchedString(pp, re))
+					fmt.Printf("   %3d  %s\n", i+1, matchedString(pp.Part, re))
 				}
 				fmt.Println()
 			}
@@ -98,7 +98,7 @@ func (p perf) Matches(rre []*regexp.Regexp) bool {
 			}
 		}
 		for _, pp := range p.Perf.Work.Parts {
-			if r.MatchString(pp) {
+			if r.MatchString(pp.Part) {
 				return true
 			}
 		}
