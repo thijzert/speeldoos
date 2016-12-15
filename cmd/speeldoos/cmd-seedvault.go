@@ -641,6 +641,15 @@ func (a *album) Job(dir string, fun jobFun) {
 		if err != nil {
 			log.Print(err)
 		}
+		for _, d := range a.Discs {
+			if d != 0 {
+				dd = fmt.Sprintf("disc_%02d", d)
+				err := zm.CopyTo(Config.Seedvault.CoverImage, path.Join(working_dir, dd, "folder.jpg"))
+				if err != nil {
+					log.Print(err)
+				}
+			}
+		}
 	}
 
 	if Config.Seedvault.InlayImage != "" {
