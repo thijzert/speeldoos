@@ -347,7 +347,7 @@ func seedvault_main(argv []string) {
 			}
 
 			fileTitle := title
-			if len(pf.Work.Parts) > 1 && len(pf.Work.Parts) > i {
+			if (explicit_numbering || len(pf.Work.Parts) > 1) && len(pf.Work.Parts) > i {
 				part := pf.Work.Parts[i]
 				if explicit_numbering {
 					if part.Number == "" {
