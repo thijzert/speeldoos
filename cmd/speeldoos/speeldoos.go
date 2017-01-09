@@ -18,6 +18,10 @@ var Config = struct {
 		Lame           string
 		ID3v2          string
 	}
+	Condense struct {
+		Quality   int
+		OutputDir string
+	}
 	Extract struct {
 		Bitrate string
 	}
@@ -56,6 +60,11 @@ func init() {
 	cmdline.StringVar(&Config.Tools.Metaflac, "tools.metaflac", "", "Path to `metaflac`")
 	cmdline.StringVar(&Config.Tools.Lame, "tools.lame", "", "Path to `lame`")
 	cmdline.StringVar(&Config.Tools.ID3v2, "tools.id3v2", "", "Path to `id3v2`")
+
+	// }}}
+	// Settings for `sd condense` {{{
+	cmdline.IntVar(&Config.Condense.Quality, "condense.quality", 4, "Condensed audio quality (0=highest, 4=recognizable, 6=audible, 9=lowest)")
+	cmdline.StringVar(&Config.Condense.OutputDir, "condense.outputdir", ".", "Output directory")
 
 	// }}}
 	// Settings for `sd extract` {{{
@@ -154,7 +163,9 @@ func init() {
 type SubCommand func([]string)
 
 func getSubCmd(name string) SubCommand {
-	if name == "extract" {
+	if name == "condense" {
+		return condense_main
+	} else if name == "extract" {
 		return extract_main
 	} else if name == "grep" {
 		return grep_main

@@ -68,12 +68,17 @@ func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
 	}
 
 	// FIXME: I'm of the opinion that this should work: elems := filepath.SplitList(filename)
+	abs := ""
 	elems := strings.Split(filename, "/")
+	if elems[0] == "" {
+		elems = elems[1:]
+		abs = "/"
+	}
 	for i, elem := range elems {
 		if len(elem) < 5 || elem[len(elem)-4:] != ".zip" {
 			continue
 		}
-		zipfile := filepath.Join(elems[0 : i+1]...)
+		zipfile := abs + filepath.Join(elems[0:i+1]...)
 		read, ok := z.zips[zipfile]
 		if !ok {
 			// log.Printf("Opening zip file %s...\n", zipfile)
@@ -122,4 +127,11 @@ func (z *ZipMap) CopyTo(filename, destination string) error {
 		}
 	}
 	return nil
+}
+
+func (z *ZipMap) Close() {
+	for k, v := range z.zips {
+		v.Close()
+		delete(z.zips, k)
+	}
 }
