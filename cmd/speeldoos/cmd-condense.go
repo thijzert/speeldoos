@@ -34,8 +34,8 @@ func condense_main(args []string) {
 	wg := &sync.WaitGroup{}
 
 	for i := 0; i < Config.ConcurrentJobs; i++ {
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			for job := range jobs {
 
 				zm := zipmap.New()
