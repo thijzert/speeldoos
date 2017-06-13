@@ -59,6 +59,7 @@ func confirmSettings() *speeldoos.Carrier {
 
 	Config.Seedvault.CoverImage, _ = ccp.FindOne(Config.Seedvault.CoverImage, "cover.jpg", "cover.jpeg", "folder.jpg")
 	Config.Seedvault.InlayImage, _ = ccp.FindOne(Config.Seedvault.InlayImage, "inlay.jpg", "inlay.jpeg", "back.jpg")
+	Config.Seedvault.DiscImage, _ = ccp.FindOne(Config.Seedvault.DiscImage, "disc.jpg", "disc.jpeg", "cd.jpg", "cd.jpeg")
 	Config.Seedvault.Booklet, _ = ccp.FindOne(Config.Seedvault.Booklet, "booklet.pdf")
 
 	var logfile_exists, cuesheet_exists bool
@@ -67,6 +68,7 @@ func confirmSettings() *speeldoos.Carrier {
 
 	fmt.Printf("\nCover image:  %s %s\n", checkFileExists(Config.Seedvault.CoverImage), Config.Seedvault.CoverImage)
 	fmt.Printf("Inlay image:  %s %s\n", checkFileExists(Config.Seedvault.InlayImage), Config.Seedvault.InlayImage)
+	fmt.Printf("Disc image:   %s %s\n", checkFileExists(Config.Seedvault.DiscImage), Config.Seedvault.DiscImage)
 	fmt.Printf("Booklet file: %s %s\n", checkFileExists(Config.Seedvault.Booklet), Config.Seedvault.Booklet)
 
 	if len(discs) > 1 {
@@ -105,6 +107,9 @@ func confirmSettings() *speeldoos.Carrier {
 	}
 	if Config.Seedvault.InlayImage != "" && !zm.Exists(Config.Seedvault.InlayImage) {
 		Config.Seedvault.InlayImage = ""
+	}
+	if Config.Seedvault.DiscImage != "" && !zm.Exists(Config.Seedvault.DiscImage) {
+		Config.Seedvault.DiscImage = ""
 	}
 	if Config.Seedvault.Booklet != "" && !zm.Exists(Config.Seedvault.Booklet) {
 		Config.Seedvault.Booklet = ""
@@ -674,6 +679,19 @@ func (a *album) Job(dir string, fun jobFun) {
 		err := zm.CopyTo(Config.Seedvault.InlayImage, path.Join(working_dir, "inlay.jpg"))
 		if err != nil {
 			log.Print(err)
+		}
+	}
+	
+	if Config.Seedvault.DiscImage != "" {
+		for _, d := range a.Discs {
+			dd := ""
+			if d != 0 {
+				dd = fmt.Sprintf("disc_%02d", d)
+			}
+			err := zm.CopyTo(Config.Seedvault.DiscImage, path.Join(working_dir, dd, "disc.jpg"))
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 
