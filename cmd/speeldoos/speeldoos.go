@@ -37,12 +37,12 @@ var Config = struct {
 		Discs                                   string
 	}
 	Seedvault struct {
-		InputXml, OutputDir             string
-		CoverImage, InlayImage, Booklet string
-		EACLogfile, Cuesheet            string
-		NameAfterComposer               bool
-		Tracker                         string
-		DArchive, D320, DV0, DV2, DV6   bool
+		InputXml, OutputDir                        string
+		CoverImage, InlayImage, DiscImage, Booklet string
+		EACLogfile, Cuesheet                       string
+		NameAfterComposer                          bool
+		Tracker                                    string
+		DArchive, D320, DV0, DV2, DV6              bool
 	}
 }{}
 
@@ -98,6 +98,7 @@ func init() {
 
 	cmdline.StringVar(&Config.Seedvault.CoverImage, "seedvault.cover_image", "", "Path to cover image")
 	cmdline.StringVar(&Config.Seedvault.InlayImage, "seedvault.inlay_image", "", "Path to inlay image")
+	cmdline.StringVar(&Config.Seedvault.DiscImage, "seedvault.disc_image", "", "Path to disc image")
 	cmdline.StringVar(&Config.Seedvault.Booklet, "seedvault.booklet", "", "Path to booklet PDF")
 	cmdline.StringVar(&Config.Seedvault.EACLogfile, "seedvault.eac_logfile", "", "Path to EAC log file")
 	cmdline.StringVar(&Config.Seedvault.Cuesheet, "seedvault.cuesheet", "", "Path to cuesheet")
