@@ -36,19 +36,31 @@ func condense_main(args []string) {
 	for i := 0; i < Config.ConcurrentJobs; i++ {
 		wg.Add(1)
 		go func() {
+			defer wg.Done()
+
+		NextJob:
 			for job := range jobs {
 
 				zm := zipmap.New()
 				defer zm.Close()
+
+				shout := func(e error) bool {
+					if e != nil {
+						log.Printf("%s: %s", tc.Red(job.Carrier.ID), e)
+						return true
+					}
+					return false
+				}
 
 				done := false
 				for _, pf := range job.Carrier.Performances {
 					for _, sf := range pf.SourceFiles {
 						dn := path.Join(Config.LibraryDir, path.Dir(sf.Filename), "folder.jpg")
 						if zm.Exists(dn) {
-							croak(zm.CopyTo(dn, path.Join(job.OutputDir, "folder.jpg")))
-							done = true
-							break
+							if !shout(zm.CopyTo(dn, path.Join(job.OutputDir, "folder.jpg"))) {
+								done = true
+								break
+							}
 						}
 					}
 					if done {
@@ -84,22 +96,30 @@ func condense_main(args []string) {
 					pipes := make([]*os.File, len(pf.SourceFiles))
 					for i, _ := range pf.SourceFiles {
 						cmd.ExtraFiles[i], pipes[i], err = os.Pipe()
-						croak(err)
+						if shout(err) {
+							continue NextJob
+						}
 					}
 
 					cmd.Start()
 
 					for i, fn := range pf.SourceFiles {
 						f, err := zm.Get(path.Join(Config.LibraryDir, fn.Filename))
-						croak(err)
+						if shout(err) {
+							continue NextJob
+						}
 
 						_, err = io.Copy(pipes[i], f)
-						croak(err)
+						if shout(err) {
+							continue NextJob
+						}
 						f.Close()
 						pipes[i].Close()
 					}
 
-					croak(cmd.Wait())
+					if shout(cmd.Wait()) {
+						continue NextJob
+					}
 
 					tags := &mFile{
 						Artist:     pf.Work.Composer.Name, // MP3 players are dumb
@@ -132,12 +152,15 @@ func condense_main(args []string) {
 					}
 
 					cmd = id3tags(tags, outp)
-					croak(cmd.Run())
+					if shout(cmd.Run()) {
+						continue NextJob
+					}
 				}
 
-				croak(os.Chtimes(job.OutputDir, time.Now(), time.Now()))
+				if shout(os.Chtimes(job.OutputDir, time.Now(), time.Now())) {
+					continue NextJob
+				}
 			}
-			wg.Done()
 		}()
 	}
 
