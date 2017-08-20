@@ -100,6 +100,39 @@ func condense_main(args []string) {
 					}
 
 					croak(cmd.Wait())
+
+					tags := &mFile{
+						Artist:     pf.Work.Composer.Name, // MP3 players are dumb
+						Soloist:    pf.Work.Composer.Name, // very dumb
+						Album:      job.Carrier.Name,
+						Composer:   pf.Work.Composer.Name,
+						Performers: make([]string, 0, 2),
+						Year:       pf.Work.Year, // Furthermore, the `id3v2` program is also extremely dumb, as it seems to ignore pre-1900 dates
+					}
+					for _, tit := range pf.Work.Title {
+						tags.Title = tit.Title
+						break
+					}
+					for _, p := range pf.Performers {
+						tags.Performers = append(tags.Performers, p.Name)
+
+						if p.Role == "soloist" || p.Role == "performer" || p.Role == "" || p.Role == "orchestra" || p.Role == "ensemble" {
+							if tags.Orchestra == "" {
+								tags.Orchestra = p.Name
+							} else {
+								tags.Orchestra = tags.Orchestra + "/" + p.Name
+							}
+						} else if p.Role == "conductor" {
+							if tags.Conductor == "" {
+								tags.Conductor = p.Name
+							} else {
+								tags.Conductor = tags.Conductor + "/" + p.Name
+							}
+						}
+					}
+
+					cmd = id3tags(tags, outp)
+					croak(cmd.Run())
 				}
 
 				croak(os.Chtimes(job.OutputDir, time.Now(), time.Now()))
