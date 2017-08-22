@@ -2,6 +2,7 @@ package hivemind
 
 import (
 	"fmt"
+	tc "github.com/thijzert/go-termcolours"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"log"
@@ -83,7 +84,15 @@ func (h *Hivemind) listen() {
 			h.workers[ev.Sender].Title = ev.Title
 		}
 		if (ev.Flags & fLog) != 0 {
-			h.writeString(ev.LogLine)
+			if ev.Error != nil {
+				if h.tty {
+					h.writeString(tc.Red("error") + ": " + ev.Error.Error() + "\n")
+				} else {
+					h.writeString("ERROR: " + ev.Error.Error() + "\n")
+				}
+			} else {
+				h.writeString(ev.LogLine)
+			}
 		}
 
 		if h.tty && (ev.Flags&(fLog|fTitle)) != 0 {
@@ -103,6 +112,9 @@ func (h *Hivemind) uncaringWrite(b []byte) {
 	for err == nil && n < len(b) {
 		i, err = h.output.Write(b[n:])
 		n += i
+	}
+	if f, ok := h.output.(*os.File); ok {
+		f.Sync()
 	}
 }
 
@@ -154,6 +166,7 @@ type changeEvent struct {
 	Flags   eventFlags
 	Title   string
 	LogLine string
+	Error   error
 }
 
 type worker struct {
@@ -167,8 +180,13 @@ type worker struct {
 func (w *worker) Work() {
 	for j := range w.Inbox {
 		err := j.Run(w)
+
 		if err != nil {
-			w.Logger.Printf("Error: %s", err)
+			w.Outbox <- changeEvent{
+				Sender: w.ID,
+				Flags:  fLog,
+				Error:  err,
+			}
 		}
 	}
 }
