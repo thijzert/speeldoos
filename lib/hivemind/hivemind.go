@@ -58,6 +58,7 @@ func (h *Hivemind) init() {
 		h.workers[i] = &worker{
 			ID:     i,
 			Title:  "",
+			Idle:   true,
 			Logger: log.New(h.output, fmt.Sprintf("[%2x] ", i), log.Ltime|log.Lmicroseconds),
 			Inbox:  h.inbox,
 			Outbox: h.outbox,
@@ -74,18 +75,23 @@ func (h *Hivemind) init() {
 	h.running = true
 }
 
+const fStatusMask eventFlags = fTitle | fIdle | fLog
+
 func (h *Hivemind) listen() {
 	if h.tty {
 		h.writeString("Current worker status:" + h.workerStatus())
 	}
 
 	for ev := range h.outbox {
-		if h.tty && (ev.Flags&(fLog|fTitle)) != 0 {
+		if h.tty && (ev.Flags&fStatusMask) != 0 {
 			h.writeString("\x1b[2K\x1b[9999D")
 		}
 
 		if (ev.Flags & fTitle) != 0 {
 			h.workers[ev.Sender].Title = ev.Title
+		}
+		if (ev.Flags & fIdle) != 0 {
+			h.workers[ev.Sender].Idle = ev.Idle
 		}
 		if (ev.Flags & fLog) != 0 {
 			if ev.Error != nil {
@@ -99,7 +105,7 @@ func (h *Hivemind) listen() {
 			}
 		}
 
-		if h.tty && (ev.Flags&(fLog|fTitle)) != 0 {
+		if h.tty && (ev.Flags&fStatusMask) != 0 {
 			h.writeString("Current worker status:" + h.workerStatus())
 		}
 	}
@@ -125,7 +131,22 @@ func (h *Hivemind) uncaringWrite(b []byte) {
 func (h *Hivemind) workerStatus() string {
 	rv := ""
 	for _, w := range h.workers {
-		rv += fmt.Sprintf(" [%s]", w.Title)
+		title := w.Title
+		if w.Idle {
+			if h.tty {
+				title = tc.Blue("idle")
+			} else {
+				title = "(idle)"
+			}
+		} else {
+			if title == "" {
+				title = "..."
+			}
+			if h.tty {
+				title = tc.Green(title)
+			}
+		}
+		rv += fmt.Sprintf(" [%s]", title)
 	}
 	return rv
 }
@@ -162,6 +183,7 @@ type eventFlags int
 
 const (
 	fTitle eventFlags = 1 << iota
+	fIdle
 	fLog
 )
 
@@ -169,6 +191,7 @@ type changeEvent struct {
 	Sender  int
 	Flags   eventFlags
 	Title   string
+	Idle    bool
 	LogLine string
 	Error   error
 }
@@ -176,6 +199,7 @@ type changeEvent struct {
 type worker struct {
 	ID     int
 	Title  string
+	Idle   bool
 	Logger *log.Logger
 	Inbox  chan Job
 	Outbox chan changeEvent
@@ -183,15 +207,22 @@ type worker struct {
 
 func (w *worker) Work() {
 	for j := range w.Inbox {
+		w.Outbox <- changeEvent{Sender: w.ID, Flags: fIdle, Idle: false}
+
 		err := j.Run(w)
 
-		if err != nil {
-			w.Outbox <- changeEvent{
-				Sender: w.ID,
-				Flags:  fLog,
-				Error:  err,
-			}
+		ce := changeEvent{
+			Sender: w.ID,
+			Flags:  fTitle | fIdle,
+			Title:  "",
+			Idle:   true,
+			Error:  err,
 		}
+		if err != nil {
+			ce.Flags |= fLog
+		}
+
+		w.Outbox <- ce
 	}
 }
 
