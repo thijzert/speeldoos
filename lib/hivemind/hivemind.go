@@ -62,7 +62,11 @@ func (h *Hivemind) init() {
 			Inbox:  h.inbox,
 			Outbox: h.outbox,
 		}
-		go h.workers[i].Work()
+		h.wg.Add(1)
+		go func(j int) {
+			defer h.wg.Done()
+			h.workers[j].Work()
+		}(i)
 	}
 
 	go h.listen()
