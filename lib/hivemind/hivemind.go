@@ -2,6 +2,7 @@ package hivemind
 
 import (
 	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"log"
 	"os"
@@ -15,6 +16,7 @@ import (
 
 type Hivemind struct {
 	output  io.Writer
+	tty     bool
 	workers []*worker
 	inbox   chan Job
 	outbox  chan changeEvent
@@ -22,6 +24,7 @@ type Hivemind struct {
 	running bool
 }
 
+// New creates a new Hivemind. The `workers` variable sets the number of workers to instantiate. If <= 0, `workers` defaults to the number of CPU's present.
 func New(workers int) *Hivemind {
 	if workers <= 0 {
 		workers = runtime.NumCPU()
@@ -30,9 +33,20 @@ func New(workers int) *Hivemind {
 		workers: make([]*worker, workers),
 		wg:      sync.WaitGroup{},
 		output:  os.Stdout,
+		tty:     true,
 	}
 
 	return rv
+}
+
+// SetOutput sets the output destination for the hive.
+func (h *Hivemind) SetOutput(w io.Writer) {
+	if f, ok := w.(*os.File); ok {
+		h.tty = terminal.IsTerminal(int(f.Fd()))
+	} else {
+		h.tty = false
+	}
+	h.output = w
 }
 
 func (h *Hivemind) init() {
@@ -56,7 +70,15 @@ func (h *Hivemind) init() {
 }
 
 func (h *Hivemind) listen() {
+	if h.tty {
+		h.writeString("Current worker status:" + h.workerStatus())
+	}
+
 	for ev := range h.outbox {
+		if h.tty && (ev.Flags&(fLog|fTitle)) != 0 {
+			h.writeString("\x1b[2K\x1b[9999D")
+		}
+
 		if (ev.Flags & fTitle) != 0 {
 			h.workers[ev.Sender].Title = ev.Title
 		}
@@ -64,12 +86,8 @@ func (h *Hivemind) listen() {
 			h.writeString(ev.LogLine)
 		}
 
-		if (ev.Flags & (fLog | fTitle)) != 0 {
-			r := "Current worker status:"
-			for _, w := range h.workers {
-				r += fmt.Sprintf(" [%s]", w.Title)
-			}
-			h.writeString(r + "\n")
+		if h.tty && (ev.Flags&(fLog|fTitle)) != 0 {
+			h.writeString("Current worker status:" + h.workerStatus())
 		}
 	}
 }
@@ -88,8 +106,15 @@ func (h *Hivemind) uncaringWrite(b []byte) {
 	}
 }
 
-// Add a job to the queue.
-// If they weren't active already, spin up the workers
+func (h *Hivemind) workerStatus() string {
+	rv := ""
+	for _, w := range h.workers {
+		rv += fmt.Sprintf(" [%s]", w.Title)
+	}
+	return rv
+}
+
+// Add a job to the queue. If they weren't active already, spin up the workers.
 func (h *Hivemind) AddJob(j Job) {
 	if !h.running {
 		h.init()
@@ -97,11 +122,12 @@ func (h *Hivemind) AddJob(j Job) {
 	h.inbox <- j
 }
 
-// Wait for all jobs to finish, and shut down the hive
+// Wait for all jobs to finish, and shut down the hive.
 func (h *Hivemind) Wait() {
 	close(h.inbox)
 	h.wg.Wait()
 	close(h.outbox)
+	h.writeString("\x1b[2K\x1b[9999D")
 	h.running = false
 }
 
