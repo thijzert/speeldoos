@@ -161,6 +161,9 @@ func (h *Hivemind) AddJob(j Job) {
 
 // Wait for all jobs to finish, and shut down the hive.
 func (h *Hivemind) Wait() {
+	if !h.running {
+		return
+	}
 	close(h.inbox)
 	h.wg.Wait()
 	close(h.outbox)
