@@ -81,16 +81,22 @@ func (job condenseJob) Run(h hivemind.JC) error {
 
 		for i, fn := range pf.SourceFiles {
 			f, err := zm.Get(path.Join(Config.LibraryDir, fn.Filename))
+			defer f.Close()
+			defer pipes[i].Close()
+
 			if err != nil {
+				cmd.Process.Kill()
+				cmd.Wait()
 				return err
 			}
 
 			_, err = io.Copy(pipes[i], f)
+
 			if err != nil {
+				cmd.Process.Kill()
+				cmd.Wait()
 				return err
 			}
-			f.Close()
-			pipes[i].Close()
 		}
 
 		if err := cmd.Wait(); err != nil {
