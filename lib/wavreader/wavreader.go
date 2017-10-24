@@ -11,7 +11,7 @@ var (
 	parseError         error = fmt.Errorf("parse error")
 )
 
-type WAVReader struct {
+type Reader struct {
 	source        io.ReadCloser
 	errorState    error
 	initialized   bool
@@ -23,12 +23,12 @@ type WAVReader struct {
 	BitsPerSample int
 }
 
-func New(source io.ReadCloser) *WAVReader {
-	rv := &WAVReader{source: source, initialized: false}
+func New(source io.ReadCloser) *Reader {
+	rv := &Reader{source: source, initialized: false}
 	return rv
 }
 
-func (w *WAVReader) Init() {
+func (w *Reader) Init() {
 	if w.initialized {
 		return
 	}
@@ -101,7 +101,7 @@ func atoi(buf []byte) int {
 	return rv
 }
 
-func (w *WAVReader) Read(b []byte) (int, error) {
+func (w *Reader) Read(b []byte) (int, error) {
 	if w.errorState != nil {
 		return 0, w.errorState
 	}
@@ -122,7 +122,7 @@ func (w *WAVReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func (w *WAVReader) Close() error {
+func (w *Reader) Close() error {
 	if w.errorState != nil {
 		return w.errorState
 	}

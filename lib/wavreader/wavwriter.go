@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-type WAVWriter struct {
+type Writer struct {
 	target        io.WriteCloser
 	fixedSize     int
 	initialized   bool
@@ -16,8 +16,8 @@ type WAVWriter struct {
 	BitsPerSample int
 }
 
-func NewWriter(target io.WriteCloser, formatType, channels, sampleRate, bitsPerSample int) *WAVWriter {
-	rv := &WAVWriter{
+func NewWriter(target io.WriteCloser, formatType, channels, sampleRate, bitsPerSample int) *Writer {
+	rv := &Writer{
 		target:        target,
 		initialized:   false,
 		FormatType:    formatType,
@@ -29,7 +29,7 @@ func NewWriter(target io.WriteCloser, formatType, channels, sampleRate, bitsPerS
 	return rv
 }
 
-func (w *WAVWriter) Init(fixedSize int) error {
+func (w *Writer) Init(fixedSize int) error {
 	b := make([]byte, 44)
 
 	stoa(b[0:4], "RIFF")
@@ -80,7 +80,7 @@ func writeAll(wr io.Writer, buf []byte) (int, error) {
 	return n, nil
 }
 
-func (w *WAVWriter) Write(buf []byte) (int, error) {
+func (w *Writer) Write(buf []byte) (int, error) {
 	if !w.initialized {
 		w.Init(0xffffffd3)
 	}
@@ -90,7 +90,7 @@ func (w *WAVWriter) Write(buf []byte) (int, error) {
 	return n, err
 }
 
-func (w *WAVWriter) Close() error {
+func (w *Writer) Close() error {
 	if !w.initialized {
 		w.Init(0xffffffd3)
 	}
