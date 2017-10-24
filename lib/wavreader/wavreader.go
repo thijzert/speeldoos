@@ -6,37 +6,33 @@ import (
 	"log"
 )
 
-type uninitializedError struct{}
-
-func (s *uninitializedError) Error() string {
-	return "reader not yet initialized"
-}
-
 var (
-	uninitialized error = &uninitializedError{}
-	parseError    error = fmt.Errorf("parse error")
+	uninitializedError error = fmt.Errorf("reader not yet initialized")
+	parseError         error = fmt.Errorf("parse error")
 )
 
 type WAVReader struct {
 	source        io.ReadCloser
 	errorState    error
+	initialized   bool
 	Size          int
 	bytesRead     int
-	FormatType    uint16
+	FormatType    int
 	Channels      int
 	SampleRate    int
 	BitsPerSample int
 }
 
 func New(source io.ReadCloser) *WAVReader {
-	rv := &WAVReader{source: source, errorState: uninitialized}
+	rv := &WAVReader{source: source, initialized: false}
 	return rv
 }
 
 func (w *WAVReader) Init() {
-	if w.errorState != uninitialized {
+	if w.initialized {
 		return
 	}
+	w.initialized = true
 
 	b := make([]byte, 44)
 	_, err := io.ReadFull(w.source, b)
@@ -65,9 +61,9 @@ func (w *WAVReader) Init() {
 	}
 
 	//log.Printf("Format header length: %d bytes", atoi(b[16:20]))
-	formatType := atoi(b[20:22])
-	if formatType != 1 {
-		log.Printf("Expected format PCM (1); got unknown format ID %d", formatType)
+	w.FormatType = atoi(b[20:22])
+	if w.FormatType != 1 {
+		log.Printf("Expected format PCM (1); got unknown format ID %d", w.FormatType)
 		w.errorState = parseError
 		return
 	}
@@ -106,11 +102,11 @@ func atoi(buf []byte) int {
 }
 
 func (w *WAVReader) Read(b []byte) (int, error) {
-	if w.errorState == uninitialized {
-		w.Init()
-	}
 	if w.errorState != nil {
 		return 0, w.errorState
+	}
+	if !w.initialized {
+		return 0, uninitializedError
 	}
 
 	//if len(b) > (w.Size-w.bytesRead) {
