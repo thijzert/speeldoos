@@ -49,6 +49,12 @@ func (fr *flacReader) Read(buf []byte) (int, error) {
 		return 0, fmt.Errorf("error decoding FLAC file")
 	}
 	n, err := fr.output.Read(buf)
+	if err != nil {
+		// Treat successful exits as EOF
+		if fr.cmd.ProcessState != nil && fr.cmd.ProcessState.Exited() && fr.cmd.ProcessState.Success() {
+			return 0, io.EOF
+		}
+	}
 	return n, err
 }
 
