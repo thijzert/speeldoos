@@ -13,14 +13,16 @@ type flacReader struct {
 	output io.ReadCloser
 }
 
-func newFlacReader(flacIn io.ReadCloser) (*flacReader, error) {
+func (c Config) newFlacReader(flacIn io.ReadCloser) (*flacReader, error) {
 	var err error
 
 	fr := &flacReader{flacIn: flacIn}
-	// FIXME: make the path to flac binary configurable
-	fr.cmd = exec.Command("flac", "-s", "-c", "-d", "-")
+	fr.cmd = exec.Command(c.flac(), "-s", "-c", "-d", "-")
 
-	fr.output, fr.cmd.Stdout = io.Pipe()
+	fr.output, err = fr.cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
 	fr.input, err = fr.cmd.StdinPipe()
 	if err != nil {
 		return nil, err
@@ -59,7 +61,11 @@ func (fr *flacReader) Close() error {
 }
 
 func FromFLAC(in io.ReadCloser) (*Reader, error) {
-	wavout, err := newFlacReader(in)
+	return defaultConfig.FromFLAC(in)
+}
+
+func (c Config) FromFLAC(in io.ReadCloser) (*Reader, error) {
+	wavout, err := c.newFlacReader(in)
 	if err != nil {
 		return nil, err
 	}
