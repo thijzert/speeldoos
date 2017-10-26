@@ -10,10 +10,14 @@ Different parts of speeldoos will have different dependencies; install them as n
 
 * FLAC/MetaFLAC
 * LAME
-* mktorrent
-* ffmpeg
+* ID3v2
 
-On my machine I installed most of these using the following command: `sudo apt-get install flac lame mktorrent ffmpeg`, but your mileage may vary.
+On my machines I installed most of these using one of the following commands:
+
+* `sudo apt-get install flac lame id3v2`
+* `sudo pacman -S flac lame id3v2`
+
+However, your mileage may vary.
 
 Currently, this project primarily consists of the format specification (in XSD form) and one command-line utility for maintaining a local speeldoos database.
 To install this utility on mac or linux, try running:
