@@ -5,13 +5,12 @@ import (
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/hivemind"
+	"github.com/thijzert/speeldoos/lib/wavreader"
 	"github.com/thijzert/speeldoos/lib/zipmap"
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"path"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -54,54 +53,49 @@ func (job condenseJob) Run(h hivemind.JC) error {
 
 		if len(pf.SourceFiles) == 0 {
 			h.Printf("%s - %s has no source files!\n", pf.Work.Composer.Name, title)
+			continue
 		}
 		outp := fmt.Sprintf("%s - %s.mp3", pf.Work.Composer.Name, title)
 		outp = path.Join(job.OutputDir, outp)
 
-		inp := ""
-		for i, _ := range pf.SourceFiles {
-			inp = fmt.Sprintf("%s|/proc/self/fd/%d", inp, i+3)
-		}
-		inp = fmt.Sprintf("concat:%s", inp[1:])
-
-		cmd := exec.Command("ffmpeg", "-v", "8", "-y", "-i", inp, "-c:a", "libmp3lame", "-q:a", strconv.Itoa(Config.Condense.Quality), outp)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.ExtraFiles = make([]*os.File, len(pf.SourceFiles))
-
-		pipes := make([]*os.File, len(pf.SourceFiles))
-		for i, _ := range pf.SourceFiles {
-			cmd.ExtraFiles[i], pipes[i], err = os.Pipe()
-			if err != nil {
-				return err
-			}
-		}
-
-		cmd.Start()
-
-		for i, fn := range pf.SourceFiles {
-			f, err := zm.Get(path.Join(Config.LibraryDir, fn.Filename))
-			defer f.Close()
-			defer pipes[i].Close()
-
-			if err != nil {
-				cmd.Process.Kill()
-				cmd.Wait()
-				return err
-			}
-
-			_, err = io.Copy(pipes[i], f)
-
-			if err != nil {
-				cmd.Process.Kill()
-				cmd.Wait()
-				return err
-			}
-		}
-
-		if err := cmd.Wait(); err != nil {
+		// set up mp3writer
+		out, err := os.Create(outp)
+		if err != nil {
 			return err
 		}
+		defer out.Close()
+
+		var wout io.WriteCloser = nil
+
+		for _, fn := range pf.SourceFiles {
+			f, err := zm.Get(path.Join(Config.LibraryDir, fn.Filename))
+
+			wav, err := wavreader.FromFLAC(f)
+			if err != nil {
+				h.Println(err.Error())
+				continue
+			}
+			wav.Init()
+			defer wav.Close()
+
+			if wout == nil {
+				wout, err = wavreader.ToMP3(out, wav.Channels, wav.SampleRate, wav.BitsPerSample)
+				if err != nil {
+					h.Println(err.Error())
+					continue
+				}
+			}
+
+			_, err = io.Copy(wout, wav)
+			if err != nil {
+				return err
+			}
+		}
+
+		if wout == nil {
+			break
+		}
+		wout.Close()
 
 		tags := &mFile{
 			Artist:     pf.Work.Composer.Name, // MP3 players are dumb
@@ -133,7 +127,7 @@ func (job condenseJob) Run(h hivemind.JC) error {
 			}
 		}
 
-		cmd = id3tags(tags, outp)
+		cmd := id3tags(tags, outp)
 		if err := cmd.Run(); err != nil {
 			return err
 		}

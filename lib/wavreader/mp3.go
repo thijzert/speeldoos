@@ -63,7 +63,7 @@ func (c Config) ToMP3(mp3Out io.Writer, channels, sampleRate, bitsPerSample int)
 	mw := &mp3Writer{mp3Out: mp3Out}
 
 	lamecmd := []string{
-		"-r", "--replaygain-accurate", "--id3v2-only",
+		"-r", "--quiet", "--replaygain-accurate", "--id3v2-only",
 		"-s", fmt.Sprintf("%g", float64(sampleRate)/1000.0),
 		"--bitwidth", fmt.Sprintf("%d", bitsPerSample),
 		"-m", mode,
