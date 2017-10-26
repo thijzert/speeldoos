@@ -16,6 +16,7 @@ import (
 )
 
 type condenseJob struct {
+	Wavconf   wavreader.Config
 	Carrier   *speeldoos.Carrier
 	OutputDir string
 }
@@ -70,7 +71,7 @@ func (job condenseJob) Run(h hivemind.JC) error {
 		for _, fn := range pf.SourceFiles {
 			f, err := zm.Get(path.Join(Config.LibraryDir, fn.Filename))
 
-			wav, err := wavreader.FromFLAC(f)
+			wav, err := job.Wavconf.FromFLAC(f)
 			if err != nil {
 				h.Println(err.Error())
 				continue
@@ -79,7 +80,7 @@ func (job condenseJob) Run(h hivemind.JC) error {
 			defer wav.Close()
 
 			if wout == nil {
-				wout, err = wavreader.ToMP3(out, wav.Channels, wav.SampleRate, wav.BitsPerSample)
+				wout, err = job.Wavconf.ToMP3(out, wav.Channels, wav.SampleRate, wav.BitsPerSample)
 				if err != nil {
 					h.Println(err.Error())
 					continue
@@ -140,6 +141,12 @@ func (job condenseJob) Run(h hivemind.JC) error {
 }
 
 func condense_main(args []string) {
+	wavconf := wavreader.Config{
+		LamePath:   Config.Tools.Lame,
+		FlacPath:   Config.Tools.Flac,
+		VBRQuality: Config.Condense.Quality,
+	}
+
 	d, err := os.Open(Config.LibraryDir)
 	croak(err)
 
@@ -188,7 +195,7 @@ func condense_main(args []string) {
 		tim := file.ModTime().Add(-24 * time.Hour)
 		croak(os.Chtimes(outdir, tim, tim))
 
-		hive.AddJob(condenseJob{foo, outdir})
+		hive.AddJob(condenseJob{wavconf, foo, outdir})
 	}
 
 	hive.Wait()
