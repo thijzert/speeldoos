@@ -2,17 +2,18 @@ package main
 
 import (
 	"fmt"
-	tc "github.com/thijzert/go-termcolours"
-	"github.com/thijzert/speeldoos"
-	"github.com/thijzert/speeldoos/lib/hivemind"
-	"github.com/thijzert/speeldoos/lib/wavreader"
-	"github.com/thijzert/speeldoos/lib/zipmap"
 	"io"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	tc "github.com/thijzert/go-termcolours"
+	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/hivemind"
+	"github.com/thijzert/speeldoos/lib/wavreader"
+	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 
 type condenseJob struct {
@@ -147,35 +148,23 @@ func condense_main(args []string) {
 		VBRQuality: Config.Condense.Quality,
 	}
 
-	d, err := os.Open(Config.LibraryDir)
-	croak(err)
-
-	files, err := d.Readdir(0)
+	d, err := allCarriers()
 	croak(err)
 
 	croak(os.MkdirAll(Config.Condense.OutputDir, 0755))
 
 	hive := hivemind.New(Config.ConcurrentJobs)
 
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		xml := path.Join(Config.LibraryDir, file.Name())
-		if len(xml) < 5 || xml[len(xml)-4:] != ".xml" {
-			continue
-		}
-
-		foo, err := speeldoos.ImportCarrier(xml)
-		if err != nil {
-			log.Print(err)
-			continue
-		}
+	for _, pc := range d {
+		foo := pc.Carrier
 
 		if foo.ID == "" {
-			log.Printf("Carrier in file '%s' has an empty ID. Skipping.", file.Name())
+			log.Printf("Carrier in file '%s' has an empty ID. Skipping.", pc.Filename)
 			continue
 		}
+
+		file, err := os.Stat(pc.Filename)
+		croak(err)
 
 		outdir := foo.ID
 		outdir = strings.Replace(outdir, "/", "-", -1)
