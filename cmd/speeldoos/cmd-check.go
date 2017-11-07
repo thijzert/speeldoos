@@ -1,9 +1,21 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"path"
+
+	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/zipmap"
 )
+
+type checkF func(*speeldoos.Carrier) []error
+
+var allChecks []checkF = []checkF{
+	check_carrierID,
+	check_sourceFiles,
+}
 
 func check_main(args []string) {
 	allCarr, err := allCarriersWithErrors()
@@ -20,11 +32,39 @@ func check_main(args []string) {
 			continue
 		}
 
-		if pc.Carrier.ID == "" {
-			exitStatus = 1
-			log.Printf("%s: no carrier ID", pc.Filename)
+		for _, f := range allChecks {
+			errs := f(pc.Carrier)
+			if errs != nil {
+				for _, e := range errs {
+					exitStatus = 1
+					log.Printf("%s: %s", pc.Filename, e.Error())
+				}
+			}
 		}
 	}
 
 	os.Exit(exitStatus)
+}
+
+func check_carrierID(foo *speeldoos.Carrier) []error {
+	if foo.ID == "" {
+		return []error{fmt.Errorf("no carrier ID")}
+	}
+	return nil
+}
+
+func check_sourceFiles(foo *speeldoos.Carrier) []error {
+	rv := []error{}
+
+	zm := zipmap.New()
+
+	for _, perf := range foo.Performances {
+		for _, sf := range perf.SourceFiles {
+			if !zm.Exists(path.Join(Config.LibraryDir, sf.Filename)) {
+				rv = append(rv, fmt.Errorf("source file missing: %s", sf))
+			}
+		}
+	}
+
+	return rv
 }
