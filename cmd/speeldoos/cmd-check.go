@@ -56,6 +56,7 @@ func check_carrierID(foo *speeldoos.Carrier) []error {
 func check_sourceFiles(foo *speeldoos.Carrier) []error {
 	rv := []error{}
 
+	seen := make([]string, 0)
 	zm := zipmap.New()
 
 	for _, perf := range foo.Performances {
@@ -63,6 +64,13 @@ func check_sourceFiles(foo *speeldoos.Carrier) []error {
 			if !zm.Exists(path.Join(Config.LibraryDir, sf.Filename)) {
 				rv = append(rv, fmt.Errorf("source file missing: %s", sf))
 			}
+
+			for _, ssf := range seen {
+				if sf.Filename == ssf {
+					rv = append(rv, fmt.Errorf("duplicate source file: %s", sf))
+				}
+			}
+			seen = append(seen, sf.Filename)
 		}
 	}
 
