@@ -37,7 +37,7 @@ func check_main(args []string) {
 			if errs != nil {
 				for _, e := range errs {
 					exitStatus = 1
-					log.Printf("%s: %s", pc.Filename, e.Error())
+					fmt.Printf("%s: %s\n", pc.Filename, e.Error())
 				}
 			}
 		}
