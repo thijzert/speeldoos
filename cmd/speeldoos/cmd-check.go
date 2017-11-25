@@ -5,16 +5,28 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/zipmap"
 )
+
+type fixableError string
+
+func (f fixableError) Error() string {
+	return string(f)
+}
+
+func fixErr(format string, a ...interface{}) fixableError {
+	return fixableError(fmt.Sprintf(format, a...))
+}
 
 type checkF func(*speeldoos.Carrier) []error
 
 var allChecks []checkF = []checkF{
 	check_carrierID,
 	check_sourceFiles,
+	check_composers,
 }
 
 func check_main(args []string) {
@@ -32,14 +44,25 @@ func check_main(args []string) {
 			continue
 		}
 
+		modified := false
+
 		for _, f := range allChecks {
 			errs := f(pc.Carrier)
 			if errs != nil {
 				for _, e := range errs {
-					exitStatus = 1
-					fmt.Printf("%s: %s\n", pc.Filename, e.Error())
+					if ff, ok := e.(fixableError); ok {
+						modified = true
+						fmt.Printf("%s: %s (fixed)\n", pc.Filename, ff)
+					} else {
+						exitStatus = 1
+						fmt.Printf("%s: %s\n", pc.Filename, e.Error())
+					}
 				}
 			}
+		}
+
+		if modified {
+			pc.Carrier.Write(pc.Filename)
 		}
 	}
 
@@ -71,6 +94,27 @@ func check_sourceFiles(foo *speeldoos.Carrier) []error {
 				}
 			}
 			seen = append(seen, sf.Filename)
+		}
+	}
+
+	return rv
+}
+
+func check_composers(foo *speeldoos.Carrier) []error {
+	rv := []error{}
+	for i, perf := range foo.Performances {
+		if perf.Work.Composer.ID == "" || perf.Work.Composer.ID == "2222" {
+			name := perf.Work.Composer.Name
+
+			if name == "" && perf.Work.Composer.ID == "" {
+				continue
+			} else if name == "Anonymous" {
+				foo.Performances[i].Work.Composer.ID = "Anonymous_work"
+			} else {
+				foo.Performances[i].Work.Composer.ID = strings.Replace(name, " ", "_", -1)
+			}
+
+			rv = append(rv, fixErr("empty composer ID for '%s'", name))
 		}
 	}
 
