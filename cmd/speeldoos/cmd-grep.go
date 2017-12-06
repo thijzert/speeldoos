@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos"
-	"os"
-	"path"
-	"regexp"
 )
 
 func grep_main(args []string) {
@@ -22,29 +21,15 @@ func grep_main(args []string) {
 		re = append(re, r)
 	}
 
-	d, err := os.Open(Config.LibraryDir)
+	d, err := allCarriers()
 	if err != nil {
 		panic(err)
 	}
 
-	files, err := d.Readdir(0)
-	if err != nil {
-		panic(err)
-	}
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
-		fn := f.Name()
-		if len(fn) < 5 || fn[len(fn)-4:] != ".xml" {
-			continue
-		}
+	for _, f := range d {
+		fn := f.Filename
+		carrier := f.Carrier
 
-		carrier, err := speeldoos.ImportCarrier(path.Join(Config.LibraryDir, fn))
-		if err != nil {
-			fmt.Printf("%s: %s\n", fn, err)
-			continue
-		}
 		for _, pf := range carrier.Performances {
 			ipp := perf{pf, carrier.ID}
 			if carrier.ID == "" {

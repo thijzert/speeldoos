@@ -3,10 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/thijzert/go-rcfile"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
+
+	"github.com/thijzert/go-rcfile"
+	"github.com/thijzert/speeldoos"
 )
 
 var Config = struct {
@@ -170,6 +173,8 @@ func getSubCmd(name string) SubCommand {
 		return extract_main
 	} else if name == "grep" {
 		return grep_main
+	} else if name == "check" {
+		return check_main
 	} else if name == "init" {
 		return init_main
 	} else if name == "seedvault" {
@@ -195,6 +200,56 @@ func main() {
 		os.Exit(1)
 		return
 	}
+}
+
+type parsedCarrier struct {
+	Filename string
+	Carrier  *speeldoos.Carrier
+	Error    error
+}
+
+func allCarriers() ([]parsedCarrier, error) {
+	ppc, err := allCarriersWithErrors()
+	if err != nil {
+		return nil, err
+	}
+
+	rv := make([]parsedCarrier, 0, len(ppc))
+	for _, pc := range ppc {
+		if pc.Error == nil {
+			rv = append(rv, pc)
+		}
+	}
+	return rv, nil
+}
+
+func allCarriersWithErrors() ([]parsedCarrier, error) {
+	rv := []parsedCarrier{}
+
+	d, err := os.Open(Config.LibraryDir)
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := d.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		fn := f.Name()
+		if len(fn) < 5 || fn[len(fn)-4:] != ".xml" {
+			continue
+		}
+
+		pc := parsedCarrier{Filename: path.Join(Config.LibraryDir, fn)}
+		pc.Carrier, pc.Error = speeldoos.ImportCarrier(pc.Filename)
+
+		rv = append(rv, pc)
+	}
+	return rv, nil
 }
 
 func croak(e error) {
