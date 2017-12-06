@@ -103,6 +103,15 @@ Example: imagine you've just purchased Bruckner's 7th symphony at Hyperion.
     sd seedvault --input_xml speeldoos.xml --output_dir out
     mv out/CDA67916.xml out/CDA67916.zip /path/to/speeldoos-library/
 
+### check
+Check your speeldoos library folder for missing information or other errors.
+
+Usage:
+
+    sd check
+
+Some errors can be fixed automatically (such as adding Composer ID's), others will require manual intervention (like providing missing source files).
+
 History
 -------
 This project was started to scratch a very specific itch, in that every music player (software or otherwise) is absolutely rubbish at classical music.
