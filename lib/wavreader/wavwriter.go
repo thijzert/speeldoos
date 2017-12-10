@@ -41,7 +41,8 @@ func (w *Writer) Init(fixedSize int) error {
 	itoa(b[22:24], w.Channels)
 	itoa(b[24:28], w.SampleRate)
 	itoa(b[28:32], (w.SampleRate*w.BitsPerSample*w.Channels)/8)
-	itoa(b[32:36], (w.BitsPerSample*w.Channels)/8)
+	itoa(b[32:34], (w.BitsPerSample*w.Channels)/8)
+	itoa(b[34:36], w.BitsPerSample)
 	stoa(b[36:40], "data")
 	itoa(b[40:44], fixedSize)
 
