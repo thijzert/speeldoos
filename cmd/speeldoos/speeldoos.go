@@ -215,32 +215,22 @@ type parsedCarrier struct {
 	Error    error
 }
 
-func allCarriers() ([]parsedCarrier, error) {
-	ppc, err := allCarriersWithErrors()
-	if err != nil {
-		return nil, err
-	}
-
-	rv := make([]parsedCarrier, 0, len(ppc))
-	for _, pc := range ppc {
-		if pc.Error == nil {
-			rv = append(rv, pc)
-		}
-	}
-	return rv, nil
+type library struct {
+	LibraryDir string
+	Carriers   []parsedCarrier
 }
 
-func allCarriersWithErrors() ([]parsedCarrier, error) {
+func (l *library) Refresh() error {
 	rv := []parsedCarrier{}
 
-	d, err := os.Open(Config.LibraryDir)
+	d, err := os.Open(l.LibraryDir)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	files, err := d.Readdir(0)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -256,7 +246,37 @@ func allCarriersWithErrors() ([]parsedCarrier, error) {
 
 		rv = append(rv, pc)
 	}
-	return rv, nil
+
+	l.Carriers = rv
+	return nil
+}
+
+func (l *library) AllCarriers() []parsedCarrier {
+	rv := make([]parsedCarrier, 0, len(l.Carriers))
+	for _, pc := range l.Carriers {
+		if pc.Error == nil {
+			rv = append(rv, pc)
+		}
+	}
+	return rv
+}
+
+func allCarriers() ([]parsedCarrier, error) {
+	l := &library{LibraryDir: Config.LibraryDir}
+	er := l.Refresh()
+	if er != nil {
+		return nil, er
+	}
+	return l.AllCarriers(), nil
+}
+
+func allCarriersWithErrors() ([]parsedCarrier, error) {
+	l := &library{LibraryDir: Config.LibraryDir}
+	er := l.Refresh()
+	if er != nil {
+		return nil, er
+	}
+	return l.Carriers, nil
 }
 
 func croak(e error) {
