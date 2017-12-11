@@ -20,6 +20,7 @@ var Config = struct {
 		Flac, Metaflac string
 		Lame           string
 		ID3v2          string
+		MPlayer        string
 	}
 	Condense struct {
 		Quality   int
@@ -63,6 +64,7 @@ func init() {
 	cmdline.StringVar(&Config.Tools.Metaflac, "tools.metaflac", "", "Path to `metaflac`")
 	cmdline.StringVar(&Config.Tools.Lame, "tools.lame", "", "Path to `lame`")
 	cmdline.StringVar(&Config.Tools.ID3v2, "tools.id3v2", "", "Path to `id3v2`")
+	cmdline.StringVar(&Config.Tools.MPlayer, "tools.mplayer", "", "Path to `mplayer`")
 
 	// }}}
 	// Settings for `sd condense` {{{
@@ -158,6 +160,9 @@ func init() {
 	if Config.Tools.ID3v2 == "" {
 		Config.Tools.ID3v2 = "id3v2"
 	}
+	if Config.Tools.MPlayer == "" {
+		Config.Tools.MPlayer = "mplayer"
+	}
 
 	if Config.ConcurrentJobs < 1 {
 		Config.ConcurrentJobs = 1
@@ -177,6 +182,8 @@ func getSubCmd(name string) SubCommand {
 		return check_main
 	} else if name == "init" {
 		return init_main
+	} else if name == "play" {
+		return play_main
 	} else if name == "seedvault" {
 		return seedvault_main
 	} else {
