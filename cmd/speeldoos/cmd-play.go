@@ -20,7 +20,13 @@ func play_main(args []string) {
 
 	var n, i int
 
-	mpl := exec.Command(Config.Tools.MPlayer, "-noconsolecontrols", "-cache", "1024", "-rawaudio", "rate=48000:channels=2:samplesize=2", "-demuxer", "rawaudio", "-")
+	mpl := exec.Command(Config.Tools.MPlayer,
+		"-really-quiet",
+		"-noconsolecontrols", "-nomouseinput", "-nolirc",
+		"-cache", "1024",
+		"-rawaudio", "rate=48000:channels=2:samplesize=2",
+		"-demuxer", "rawaudio",
+		"-")
 
 	mpl.Stdout = os.Stdout
 	mpl.Stderr = os.Stderr
