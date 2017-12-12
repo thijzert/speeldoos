@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/thijzert/go-rcfile"
 	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/wavreader"
+	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 
 var Config = struct {
@@ -217,7 +220,17 @@ type parsedCarrier struct {
 
 type library struct {
 	LibraryDir string
+	WAVConf    wavreader.Config
 	Carriers   []parsedCarrier
+	zip        *zipmap.ZipMap
+}
+
+func newLibrary(dir string) *library {
+	rv := &library{
+		LibraryDir: dir,
+		zip:        zipmap.New(),
+	}
+	return rv
 }
 
 func (l *library) Refresh() error {
@@ -261,8 +274,68 @@ func (l *library) AllCarriers() []parsedCarrier {
 	return rv
 }
 
+func (l *library) GetWAV(pf speeldoos.Performance) (*wavreader.Reader, error) {
+	ch, rate, bits, bps := 0, 0, 0, 0
+	fixedSize := 0
+	for i, f := range pf.SourceFiles {
+		fl, er := l.zip.Get(path.Join(l.LibraryDir, f.Filename))
+		if er != nil {
+			return nil, er
+		}
+		defer fl.Close()
+
+		ww, er := l.WAVConf.FromFLAC(fl)
+		if er != nil {
+			return nil, er
+		}
+		defer ww.Close()
+		ww.Init()
+
+		if i == 0 {
+			ch, rate, bits = ww.Channels, ww.SampleRate, ww.BitsPerSample
+			bps = ch * ((bits + 7) / 8)
+		} else if ch != ww.Channels || rate != ww.SampleRate || bits != ww.BitsPerSample {
+			return nil, fmt.Errorf("audio format mismatch: part %d has %d channels, %d bits at %dHz; previously it was %d channels, %d bits at %dHz", i+1, ww.Channels, ww.BitsPerSample, ww.SampleRate, ch, bits, rate)
+		}
+
+		if ww.Size == 0 || (ww.Size%bps) != 0 {
+			return nil, fmt.Errorf("wav length (%d) is not a multiple of bytes per sample (%d)", ww.Size, bps)
+		}
+		fixedSize += ww.Size
+	}
+
+	rv, wri := wavreader.Pipe()
+	rv.Channels, rv.SampleRate, rv.BitsPerSample = ch, rate, bits
+	rv.Size = fixedSize
+
+	go func() {
+		for _, f := range pf.SourceFiles {
+			fl, er := l.zip.Get(path.Join(l.LibraryDir, f.Filename))
+			if er != nil {
+				wri.CloseWithError(er)
+			}
+			defer fl.Close()
+
+			ww, er := l.WAVConf.FromFLAC(fl)
+			if er != nil {
+				wri.CloseWithError(er)
+			}
+			ww.Init()
+			defer ww.Close()
+
+			_, er = io.Copy(wri, ww)
+			if er != nil {
+				wri.CloseWithError(er)
+			}
+		}
+
+		wri.Close()
+	}()
+	return rv, nil
+}
+
 func allCarriers() ([]parsedCarrier, error) {
-	l := &library{LibraryDir: Config.LibraryDir}
+	l := newLibrary(Config.LibraryDir)
 	er := l.Refresh()
 	if er != nil {
 		return nil, er
@@ -271,7 +344,7 @@ func allCarriers() ([]parsedCarrier, error) {
 }
 
 func allCarriersWithErrors() ([]parsedCarrier, error) {
-	l := &library{LibraryDir: Config.LibraryDir}
+	l := newLibrary(Config.LibraryDir)
 	er := l.Refresh()
 	if er != nil {
 		return nil, er

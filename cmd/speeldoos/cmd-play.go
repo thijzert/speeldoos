@@ -1,30 +1,39 @@
 package main
 
 import (
-	"encoding/binary"
+	"fmt"
+	"io"
 	"log"
-	"math"
 	"os"
 	"os/exec"
+
+	"github.com/thijzert/speeldoos/lib/wavreader"
 )
 
 func play_main(args []string) {
-	// 3 seconds of 207.5 Hz
-	buf := make([]byte, 3*48000*4)
-	for i := 0; i < 3*48000; i++ {
-		var t float64 = float64(i) / 48000.0
-		y := int(math.Sin(415.0*t*math.Pi) * 10000.0)
-		binary.LittleEndian.PutUint16(buf[4*i:], uint16(y))
-		binary.LittleEndian.PutUint16(buf[4*i+2:], uint16(y))
-	}
+	l := newLibrary(Config.LibraryDir)
+	l.Refresh()
 
-	var n, i int
+	var s *wavreader.Reader
+	var err error = fmt.Errorf("no performances found")
+firstPerformance:
+	for _, car := range l.Carriers {
+		for _, pf := range car.Carrier.Performances {
+			s, err = l.GetWAV(pf)
+			if err == nil {
+				break firstPerformance
+			}
+		}
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mpl := exec.Command(Config.Tools.MPlayer,
 		"-really-quiet",
 		"-noconsolecontrols", "-nomouseinput", "-nolirc",
 		"-cache", "1024",
-		"-rawaudio", "rate=48000:channels=2:samplesize=2",
+		"-rawaudio", fmt.Sprintf("rate=%d:channels=%d:samplesize=%d", s.SampleRate, s.Channels, (s.BitsPerSample+7)/8),
 		"-demuxer", "rawaudio",
 		"-")
 
@@ -39,14 +48,9 @@ func play_main(args []string) {
 	mpl.Start()
 	defer mpl.Wait()
 
-	i = 0
-	n = 0
-	for err == nil {
-		i, err = output.Write(buf[n:])
-		n += i
-		if n >= len(buf) {
-			break
-		}
+	_, err = io.Copy(output, s)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	output.Close()
