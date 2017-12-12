@@ -28,6 +28,16 @@ func New(source io.ReadCloser) *Reader {
 	return rv
 }
 
+func Pipe() (*Reader, *io.PipeWriter) {
+	pr, pw := io.Pipe()
+	rv := &Reader{
+		source:      pr,
+		initialized: true,
+	}
+
+	return rv, pw
+}
+
 func (w *Reader) Init() {
 	if w.initialized {
 		return
