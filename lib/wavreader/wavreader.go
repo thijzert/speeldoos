@@ -91,6 +91,8 @@ func (w *Reader) Init() {
 		w.errorState = parseError
 		return
 	}
+
+	w.Size = atoi(b[40:44])
 }
 
 func atoi(buf []byte) int {
