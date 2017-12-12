@@ -34,7 +34,7 @@ func (w *Reader) Init() {
 	}
 	w.initialized = true
 
-	b := make([]byte, 44)
+	b := make([]byte, 44, 68)
 	_, err := io.ReadFull(w.source, b)
 	if err != nil {
 		w.errorState = err
@@ -61,7 +61,35 @@ func (w *Reader) Init() {
 	}
 
 	//log.Printf("Format header length: %d bytes", atoi(b[16:20]))
+	dataChunkStart := 36
 	w.FormatType = atoi(b[20:22])
+	if w.FormatType == 0xfffe {
+		b = b[:68]
+		_, err := io.ReadFull(w.source, b[44:])
+		if err != nil {
+			w.errorState = err
+			return
+		}
+		extendedData := atoi(b[36:38])
+		if extendedData > 22 {
+			extraExtra := make([]byte, extendedData-22)
+			_, err := io.ReadFull(w.source, extraExtra)
+			if err != nil {
+				w.errorState = err
+				return
+			}
+
+			b = append(b, extraExtra...)
+		}
+
+		dataChunkStart += 2 + extendedData
+
+		// Check the extended format GUID
+		if string(b[44:60]) == "\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71" {
+			// Whew, still PCM
+			w.FormatType = 1
+		}
+	}
 	if w.FormatType != 1 {
 		log.Printf("Expected format PCM (1); got unknown format ID %d", w.FormatType)
 		w.errorState = parseError
@@ -86,13 +114,16 @@ func (w *Reader) Init() {
 		return
 	}
 
-	if string(b[36:40]) != "data" {
-		log.Printf("Expected: \"data\" or \"fmt \"; got: \"%s\" (%02x)", b[36:40], b[36:40])
+	// Data Chunk
+	dc := b[dataChunkStart:]
+
+	if string(dc[0:4]) != "data" {
+		log.Printf("Expected: \"data\" or \"fmt \"; got: \"%s\" (%02x)", dc[0:4], dc[0:4])
 		w.errorState = parseError
 		return
 	}
 
-	w.Size = atoi(b[40:44])
+	w.Size = atoi(dc[4:8])
 }
 
 func atoi(buf []byte) int {
