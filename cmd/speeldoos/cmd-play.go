@@ -7,11 +7,12 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/wavreader"
 )
 
 func play_main(args []string) {
-	l := newLibrary(Config.LibraryDir)
+	l := speeldoos.NewLibrary(Config.LibraryDir)
 	l.Refresh()
 
 	var s *wavreader.Reader
