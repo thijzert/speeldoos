@@ -10,6 +10,7 @@ import (
 	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 
+// A collection of Carriers
 type Library struct {
 	LibraryDir string
 	WAVConf    wavreader.Config
@@ -18,9 +19,14 @@ type Library struct {
 }
 
 type ParsedCarrier struct {
+	// The full path to the xml file
 	Filename string
-	Carrier  *Carrier
-	Error    error
+
+	// The parsed Carrier, if successful
+	Carrier *Carrier
+
+	// The parse error, if applicable
+	Error error
 }
 
 func NewLibrary(dir string) *Library {
@@ -31,6 +37,7 @@ func NewLibrary(dir string) *Library {
 	return rv
 }
 
+// (Re-)read all XML files from disk, parsing any speeldoos files
 func (l *Library) Refresh() error {
 	rv := []ParsedCarrier{}
 
@@ -62,6 +69,7 @@ func (l *Library) Refresh() error {
 	return nil
 }
 
+// Filter all Carriers in the library that are error-free
 func (l *Library) AllCarriers() []ParsedCarrier {
 	rv := make([]ParsedCarrier, 0, len(l.Carriers))
 	for _, pc := range l.Carriers {
@@ -72,6 +80,7 @@ func (l *Library) AllCarriers() []ParsedCarrier {
 	return rv
 }
 
+// Open one performance in the library and return its raw audio data
 func (l *Library) GetWAV(pf Performance) (*wavreader.Reader, error) {
 	ch, rate, bits, bps := 0, 0, 0, 0
 	fixedSize := 0

@@ -34,7 +34,7 @@ firstPerformance:
 		"-really-quiet",
 		"-noconsolecontrols", "-nomouseinput", "-nolirc",
 		"-cache", "1024",
-		"-rawaudio", fmt.Sprintf("rate=%d:channels=%d:samplesize=%d", s.SampleRate, s.Channels, (s.BitsPerSample+7)/8),
+		"-rawaudio", fmt.Sprintf("rate=%d:channels=%d:samplesize=%d", Config.Play.SampleRate, Config.Play.Channels, (Config.Play.Bits+7)/8),
 		"-demuxer", "rawaudio",
 		"-")
 

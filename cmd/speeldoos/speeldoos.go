@@ -39,6 +39,9 @@ var Config = struct {
 		Soloist, Orchestra, Ensemble, Conductor string
 		Discs                                   string
 	}
+	Play struct {
+		SampleRate, Channels, Bits int
+	}
 	Seedvault struct {
 		InputXml, OutputDir                        string
 		CoverImage, InlayImage, DiscImage, Booklet string
@@ -94,6 +97,14 @@ func init() {
 	cmdline.StringVar(&Config.Init.Conductor, "init.conductor", "", "Pre-fill a conductor in each performance")
 
 	cmdline.StringVar(&Config.Init.Discs, "init.discs", "", "A space separated list of the number of tracks in each disc, for a multi-disc release.")
+
+	// }}}
+	// Settings for `sd play` {{{
+
+	// TODO: Remove 44.1kHz default, and autodetect the sound card's native rate
+	cmdline.IntVar(&Config.Play.SampleRate, "play.rate", 44100, "Playback sample rate.")
+	cmdline.IntVar(&Config.Play.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
+	cmdline.IntVar(&Config.Play.Bits, "play.bits", 16, "Playback audio resolution")
 
 	// }}}
 	// Settings pertaining to `sd seedvault` {{{
