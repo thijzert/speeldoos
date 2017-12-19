@@ -95,8 +95,8 @@ func (l *Library) GetWAV(pf Performance) (*wavreader.Reader, error) {
 		if er != nil {
 			return nil, er
 		}
-		defer ww.Close()
 		ww.Init()
+		ww.Close()
 
 		if i == 0 {
 			ch, rate, bits = ww.Channels, ww.SampleRate, ww.BitsPerSample
@@ -128,12 +128,13 @@ func (l *Library) GetWAV(pf Performance) (*wavreader.Reader, error) {
 				wri.CloseWithError(er)
 			}
 			ww.Init()
-			defer ww.Close()
 
 			_, er = io.Copy(wri, ww)
 			if er != nil {
 				wri.CloseWithError(er)
 			}
+
+			ww.Close()
 		}
 
 		wri.Close()

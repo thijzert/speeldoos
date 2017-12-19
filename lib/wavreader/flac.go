@@ -7,16 +7,20 @@ import (
 )
 
 type flacReader struct {
-	cmd    *exec.Cmd
-	flacIn io.ReadCloser
-	input  io.WriteCloser
-	output io.ReadCloser
+	cmd             *exec.Cmd
+	flacIn          io.ReadCloser
+	input           io.WriteCloser
+	output          io.ReadCloser
+	finishedReading chan struct{}
 }
 
 func (c Config) newFlacReader(flacIn io.ReadCloser) (*flacReader, error) {
 	var err error
 
-	fr := &flacReader{flacIn: flacIn}
+	fr := &flacReader{
+		flacIn:          flacIn,
+		finishedReading: make(chan struct{}),
+	}
 	fr.cmd = exec.Command(c.flac(), "-s", "-c", "-d", "-")
 
 	fr.output, err = fr.cmd.StdoutPipe()
@@ -35,10 +39,12 @@ func (c Config) newFlacReader(flacIn io.ReadCloser) (*flacReader, error) {
 
 	go func() {
 		io.Copy(fr.input, flacIn)
-		fr.flacIn.Close()
+
 		fr.input.Close()
+		fr.flacIn.Close()
+		for _ = range fr.finishedReading {
+		}
 		fr.cmd.Wait()
-		fr.output.Close()
 	}()
 
 	return fr, nil
@@ -50,18 +56,30 @@ func (fr *flacReader) Read(buf []byte) (int, error) {
 	}
 	n, err := fr.output.Read(buf)
 	if err != nil {
+		select {
+		case <-fr.finishedReading:
+		default:
+			close(fr.finishedReading)
+		}
+
 		// Treat successful exits as EOF
 		if fr.cmd.ProcessState != nil && fr.cmd.ProcessState.Exited() && fr.cmd.ProcessState.Success() {
-			return 0, io.EOF
+			return n, io.EOF
 		}
 	}
 	return n, err
 }
 
 func (fr *flacReader) Close() error {
-	fr.output.Close()
-	fr.flacIn.Close()
+	select {
+	case <-fr.finishedReading:
+	default:
+		close(fr.finishedReading)
+	}
+
 	fr.input.Close()
+	fr.flacIn.Close()
+	fr.output.Close()
 
 	return fr.cmd.Wait()
 }
