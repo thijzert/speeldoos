@@ -82,7 +82,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 		}
 
 		for i, ch := range bufRate {
-			nBits, err = convertBits(bufBits[i], ch[:nRate], r, Bin, bits)
+			nBits, err = convertBits(bufBits[i], ch[:nRate], r, Bin, Bout, bits)
 			if err != nil {
 				wri.CloseWithError(err)
 				return
@@ -139,13 +139,53 @@ func convertRate(out []byte, in []byte, r *Reader, Bin, rate int) (int, error) {
 	return 0, fmt.Errorf("sample rate conversion is not implemented")
 }
 
-func convertBits(out []byte, in []byte, r *Reader, Bin, bits int) (int, error) {
+func convertBits(out []byte, in []byte, r *Reader, Bin, Bout, bits int) (int, error) {
 	if r.BitsPerSample == bits {
 		// We've caught this case by reusing buffers
 		return len(in), nil
 	}
 
-	return 0, fmt.Errorf("bit resolution conversion is not implemented")
+	// FIXME: handle bit lengths that aren't multiples of 8 bits. (Do those exist?)
+
+	if r.BitsPerSample > bits {
+		// Discard input bits in the output stream
+		i, n := 0, 0
+
+		for i < len(in) {
+			// HACK: Handle conversion from signed 16-bit to unsigned 8-bit
+			if bits == 8 {
+				out[n] = 128 + in[i+Bin-1]
+			} else {
+				copy(out[n:], in[i+Bin-Bout:i+Bin])
+			}
+
+			i += Bin
+			n += Bout
+		}
+
+		return n, nil
+	} else {
+		// Pad the input stream to fill the output stream
+		i, n := 0, 0
+
+		// HACK: Handle conversion from unsigned 8-bit to signed 16-bit
+		var offset uint8 = 0
+		if Bin == 1 {
+			offset = 128
+		}
+
+		for i < len(in) {
+			for j := 0; j < Bout; j++ {
+				out[n+Bout-j-1] = in[i+(Bin-(j%Bin)-1)] + offset
+				// TODO: Add dithering, or some other method of hiding rounding errors
+			}
+
+			i += Bin
+			n += Bout
+		}
+
+		return n, nil
+	}
 }
 
 func interleave(out []byte, in [][]byte, length int, Bout int) (int, error) {
