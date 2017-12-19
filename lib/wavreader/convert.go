@@ -42,7 +42,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 	bufChan := make([][]byte, channels)
 	bufRate := make([]*rateConverter, channels)
 	bufBits := make([][]byte, channels)
-	bufOut := make([]byte, r.Channels*saatOut*Bout)
+	bufOut := make([]byte, channels*saatOut*Bout)
 
 	for i, _ := range bufChan {
 		bufChan[i] = make([]byte, saatIn*Bin)
