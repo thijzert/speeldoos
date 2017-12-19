@@ -5,6 +5,11 @@ import (
 	"io"
 )
 
+const (
+	// The length, in milliseconds, of conversion chunks
+	msCHUNK = 10
+)
+
 func Convert(r *Reader, channels, rate, bits int) (*Reader, error) {
 	// Fast path: don't convert anything if not absolutely necessary
 	if r.Channels == channels && r.SampleRate == rate && r.BitsPerSample == bits {
@@ -27,7 +32,7 @@ func Convert(r *Reader, channels, rate, bits int) (*Reader, error) {
 
 func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 	// Samples at a time. We're reading the input stream in chunks of, say, 10ms.
-	saatIn, saatOut := (r.SampleRate+99)/100, 1+(rate+99)/100
+	saatIn, saatOut := (msCHUNK*r.SampleRate+999)/1000, 1+(msCHUNK*rate+999)/1000
 
 	// Bytes per sample
 	Bin, Bout := (r.BitsPerSample+7)/8, (bits+7)/8
@@ -42,12 +47,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 	for i, _ := range bufChan {
 		bufChan[i] = make([]byte, saatIn*Bin)
 
-		if r.SampleRate == rate {
-			// Optimization: since we're not converting, just reuse the last output buffer
-			bufRate[i] = &rateConverter{Output: bufChan[i]}
-		} else {
-			bufRate[i] = &rateConverter{Output: make([]byte, saatOut*Bin)}
-		}
+		bufRate[i] = newRateConverter(r, rate, bufChan[i])
 
 		if r.BitsPerSample == bits {
 			// Optimization: since we're not converting, just reuse the last output buffer
@@ -74,7 +74,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 		}
 
 		for i, rc := range bufRate {
-			nRate, err = rc.convert(bufChan[i][:nMono], r, Bin, rate)
+			nRate, err = rc.convert(bufChan[i][:nMono])
 			if err != nil {
 				wri.CloseWithError(err)
 				return
@@ -131,47 +131,69 @@ func monoChannels(out [][]byte, in []byte, r *Reader, Bin int) (int, error) {
 }
 
 type rateConverter struct {
-	Output  []byte
-	skipped int
+	Output          []byte
+	skipped         int
+	rateIn, rateOut int
+	bin             int
+	saatIn, saatOut int
 }
 
-func (rc *rateConverter) convert(in []byte, r *Reader, Bin, rate int) (int, error) {
-	if r.SampleRate == rate {
+func newRateConverter(r *Reader, rate int, input []byte) *rateConverter {
+	rc := &rateConverter{
+		bin:     (r.BitsPerSample + 7) / 8,
+		rateIn:  r.SampleRate,
+		rateOut: rate,
+		saatIn:  (msCHUNK*r.SampleRate + 999) / 1000,
+		saatOut: 1 + (msCHUNK*rate+999)/1000,
+	}
+
+	if rc.rateIn == rc.rateOut {
+		// Optimization: since we're not converting, just reuse the input buffer as output
+		rc.Output = input
+	} else {
+		rc.Output = make([]byte, rc.saatOut*rc.bin)
+	}
+
+	return rc
+}
+
+func (rc *rateConverter) convert(in []byte) (int, error) {
+	if rc.rateIn == rc.rateOut {
 		// We've caught this case by reusing buffers
 		return len(in), nil
 	}
 
-	if r.SampleRate > rate && (r.SampleRate%rate) == 0 {
+	if rc.rateIn > rc.rateOut && (rc.rateIn%rc.rateOut) == 0 {
 		// Fast path: the source sample rate is a multiple of the target rate
 
 		// Output a sample every c samples
-		c := r.SampleRate / rate
+		c := rc.rateIn / rc.rateOut
 
 		i, n := 0, 0
 
 		for i < len(in) {
 			if rc.skipped == 0 {
-				copy(rc.Output[n:], in[i:i+Bin])
-				n += Bin
+				copy(rc.Output[n:], in[i:i+rc.bin])
+				n += rc.bin
 			}
 
 			rc.skipped = (rc.skipped + 1) % c
-			i += Bin
+			i += rc.bin
 		}
 
 		return n, nil
-	} else if r.SampleRate < rate && (rate%r.SampleRate) == 0 {
+	} else if rc.rateIn < rc.rateOut && (rc.rateOut%rc.rateIn) == 0 {
 		// Another fast path: approximate the upscaled version with squarewaves
 
 		// Repeat each sample c times
-		c := rate / r.SampleRate
+		c := rc.rateOut / rc.rateIn
 
 		i := 0
 		for i < len(in) {
 			for j := 0; j < c; j++ {
-				copy(rc.Output[i*c+j*Bin:], in[i:i+Bin])
+				copy(rc.Output[i*c+j*rc.bin:], in[i:i+rc.bin])
 			}
-			i += Bin
+			i += rc.bin
 		}
 
 		return len(in) * c, nil
