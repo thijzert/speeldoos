@@ -41,6 +41,7 @@ var Config = struct {
 	}
 	Play struct {
 		SampleRate, Channels, Bits int
+		TapFilename                string
 	}
 	Seedvault struct {
 		InputXml, OutputDir                        string
@@ -105,6 +106,7 @@ func init() {
 	cmdline.IntVar(&Config.Play.SampleRate, "play.rate", 44100, "Playback sample rate.")
 	cmdline.IntVar(&Config.Play.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
 	cmdline.IntVar(&Config.Play.Bits, "play.bits", 16, "Playback audio resolution")
+	cmdline.StringVar(&Config.Play.TapFilename, "play.debug-tap", "", "For debugging: tee output to a wav file")
 
 	// }}}
 	// Settings pertaining to `sd seedvault` {{{

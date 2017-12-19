@@ -54,7 +54,20 @@ firstPerformance:
 	mpl.Start()
 	defer mpl.Wait()
 
-	_, err = io.Copy(output, aud)
+	if Config.Play.TapFilename == "" {
+		_, err = io.Copy(output, aud)
+	} else {
+		var tap *os.File
+		tap, err = os.Create(Config.Play.TapFilename)
+		if err == nil {
+			tapOut := wavreader.NewWriter(tap, 1, Config.Play.Channels, Config.Play.SampleRate, Config.Play.Bits)
+			defer tapOut.Close()
+
+			out := io.MultiWriter(tapOut, output)
+			_, err = io.Copy(out, aud)
+		}
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
