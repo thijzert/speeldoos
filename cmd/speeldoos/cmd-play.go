@@ -30,11 +30,16 @@ firstPerformance:
 		log.Fatal(err)
 	}
 
+	aud, err := wavreader.Convert(s, Config.Play.Channels, Config.Play.SampleRate, Config.Play.Bits)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	mpl := exec.Command(Config.Tools.MPlayer,
 		"-really-quiet",
 		"-noconsolecontrols", "-nomouseinput", "-nolirc",
 		"-cache", "1024",
-		"-rawaudio", fmt.Sprintf("rate=%d:channels=%d:samplesize=%d", Config.Play.SampleRate, Config.Play.Channels, (Config.Play.Bits+7)/8),
+		"-rawaudio", fmt.Sprintf("channels=%d:rate=%d:samplesize=%d", Config.Play.Channels, Config.Play.SampleRate, (Config.Play.Bits+7)/8),
 		"-demuxer", "rawaudio",
 		"-")
 
@@ -49,7 +54,7 @@ firstPerformance:
 	mpl.Start()
 	defer mpl.Wait()
 
-	_, err = io.Copy(output, s)
+	_, err = io.Copy(output, aud)
 	if err != nil {
 		log.Fatal(err)
 	}
