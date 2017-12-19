@@ -136,6 +136,30 @@ func convertRate(out []byte, in []byte, r *Reader, Bin, rate int) (int, error) {
 		return len(in), nil
 	}
 
+	if r.SampleRate > rate && (r.SampleRate%rate) == 0 {
+		// Fast path: the source sample rate is a multiple of the target rate
+
+		// Output a sample every c samples
+		c := r.SampleRate / rate
+		d := c
+		// FIXME: keep this state for the next chunk, or deal with distortion artifacts from rounding
+
+		i, n := 0, 0
+
+		for i < len(in) {
+			if d == c {
+				d = 0
+				copy(out[n:], in[i:i+Bin])
+				n += Bin
+			}
+
+			d++
+			i += Bin
+		}
+
+		return n, nil
+	}
+
 	return 0, fmt.Errorf("sample rate conversion is not implemented")
 }
 
