@@ -160,6 +160,21 @@ func (rc *rateConverter) convert(in []byte, r *Reader, Bin, rate int) (int, erro
 		}
 
 		return n, nil
+	} else if r.SampleRate < rate && (rate%r.SampleRate) == 0 {
+		// Another fast path: approximate the upscaled version with squarewaves
+
+		// Repeat each sample c times
+		c := rate / r.SampleRate
+
+		i := 0
+		for i < len(in) {
+			for j := 0; j < c; j++ {
+				copy(rc.Output[i*c+j*Bin:], in[i:i+Bin])
+			}
+			i += Bin
+		}
+
+		return len(in) * c, nil
 	}
 
 	return 0, fmt.Errorf("sample rate conversion is not implemented")
