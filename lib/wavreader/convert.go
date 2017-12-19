@@ -35,7 +35,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 	// Create buffers
 	bufIn := make([]byte, r.Channels*saatIn*Bin)
 	bufChan := make([][]byte, channels)
-	bufRate := make([][]byte, channels)
+	bufRate := make([]*rateConverter, channels)
 	bufBits := make([][]byte, channels)
 	bufOut := make([]byte, r.Channels*saatOut*Bout)
 
@@ -44,14 +44,14 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 
 		if r.SampleRate == rate {
 			// Optimization: since we're not converting, just reuse the last output buffer
-			bufRate[i] = bufChan[i]
+			bufRate[i] = &rateConverter{Output: bufChan[i]}
 		} else {
-			bufRate[i] = make([]byte, saatOut*Bin)
+			bufRate[i] = &rateConverter{Output: make([]byte, saatOut*Bin)}
 		}
 
 		if r.BitsPerSample == bits {
 			// Optimization: since we're not converting, just reuse the last output buffer
-			bufBits[i] = bufRate[i]
+			bufBits[i] = bufRate[i].Output
 		} else {
 			bufBits[i] = make([]byte, saatOut*Bout)
 		}
@@ -73,8 +73,8 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 			return
 		}
 
-		for i, ch := range bufChan {
-			nRate, err = convertRate(bufRate[i], ch[:nMono], r, Bin, rate)
+		for i, rc := range bufRate {
+			nRate, err = rc.convert(bufChan[i][:nMono], r, Bin, rate)
 			if err != nil {
 				wri.CloseWithError(err)
 				return
@@ -82,7 +82,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 		}
 
 		for i, ch := range bufRate {
-			nBits, err = convertBits(bufBits[i], ch[:nRate], r, Bin, Bout, bits)
+			nBits, err = convertBits(bufBits[i], ch.Output[:nRate], r, Bin, Bout, bits)
 			if err != nil {
 				wri.CloseWithError(err)
 				return
@@ -130,7 +130,12 @@ func monoChannels(out [][]byte, in []byte, r *Reader, Bin int) (int, error) {
 	}
 }
 
-func convertRate(out []byte, in []byte, r *Reader, Bin, rate int) (int, error) {
+type rateConverter struct {
+	Output  []byte
+	skipped int
+}
+
+func (rc *rateConverter) convert(in []byte, r *Reader, Bin, rate int) (int, error) {
 	if r.SampleRate == rate {
 		// We've caught this case by reusing buffers
 		return len(in), nil
@@ -141,19 +146,16 @@ func convertRate(out []byte, in []byte, r *Reader, Bin, rate int) (int, error) {
 
 		// Output a sample every c samples
 		c := r.SampleRate / rate
-		d := c
-		// FIXME: keep this state for the next chunk, or deal with distortion artifacts from rounding
 
 		i, n := 0, 0
 
 		for i < len(in) {
-			if d == c {
-				d = 0
-				copy(out[n:], in[i:i+Bin])
+			if rc.skipped == 0 {
+				copy(rc.Output[n:], in[i:i+Bin])
 				n += Bin
 			}
 
-			d++
+			rc.skipped = (rc.skipped + 1) % c
 			i += Bin
 		}
 
