@@ -20,7 +20,7 @@ func (c Config) AudioOutput() (*Writer, error) {
 	rawAudio := fmt.Sprintf("channels=%d:rate=%d:samplesize=%d",
 		format.Channels,
 		format.Rate,
-		format.Bits,
+		(format.Bits+7)/8,
 	)
 	mpl := exec.Command(c.MPlayerPath,
 		"-really-quiet",
