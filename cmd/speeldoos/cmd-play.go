@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 
 	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/wavreader"
@@ -31,29 +30,15 @@ firstPerformance:
 		log.Fatal(err)
 	}
 
-	aud, err := wavreader.Convert(s, Config.Play.Channels, Config.Play.SampleRate, Config.Play.Bits)
+	aud, err := wavreader.Convert(s, Config.WAVConf.PlaybackFormat.Channels, Config.WAVConf.PlaybackFormat.Rate, Config.WAVConf.PlaybackFormat.Bits)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	mpl := exec.Command(Config.Tools.MPlayer,
-		"-really-quiet",
-		"-noconsolecontrols", "-nomouseinput", "-nolirc",
-		"-cache", "1024",
-		"-rawaudio", fmt.Sprintf("channels=%d:rate=%d:samplesize=%d", Config.Play.Channels, Config.Play.SampleRate, (Config.Play.Bits+7)/8),
-		"-demuxer", "rawaudio",
-		"-")
-
-	mpl.Stdout = os.Stdout
-	mpl.Stderr = os.Stderr
-
-	output, err := mpl.StdinPipe()
+	output, err := Config.WAVConf.AudioOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	mpl.Start()
-	defer mpl.Wait()
 
 	if Config.Play.TapFilename == "" {
 		_, err = io.Copy(output, aud)
@@ -61,7 +46,7 @@ firstPerformance:
 		var tap *os.File
 		tap, err = os.Create(Config.Play.TapFilename)
 		if err == nil {
-			tapOut := wavreader.NewWriter(tap, 1, Config.Play.Channels, Config.Play.SampleRate, Config.Play.Bits)
+			tapOut := wavreader.NewWriter(tap, 1, Config.WAVConf.PlaybackFormat.Channels, Config.WAVConf.PlaybackFormat.Rate, Config.WAVConf.PlaybackFormat.Bits)
 			defer tapOut.Close()
 
 			out := io.MultiWriter(tapOut, output)

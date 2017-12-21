@@ -1,5 +1,12 @@
 package wavreader
 
+type StreamFormat struct {
+	Format   int
+	Channels int
+	Rate     int
+	Bits     int
+}
+
 type Config struct {
 	// Path to `lame` binary
 	LamePath string
@@ -12,6 +19,12 @@ type Config struct {
 
 	// Path to `flac` binary
 	FlacPath string
+
+	// Path to `mplayer` binary
+	MPlayerPath string
+
+	// Stream format for audio output
+	PlaybackFormat StreamFormat
 }
 
 var defaultConfig Config
@@ -28,4 +41,23 @@ func (c Config) flac() string {
 		return c.FlacPath
 	}
 	return "flac"
+}
+
+func (c Config) mplayer() string {
+	if c.MPlayerPath != "" {
+		return c.MPlayerPath
+	}
+	return "mplayer"
+}
+
+func (c Config) playbackFormat() StreamFormat {
+	if c.PlaybackFormat.Format != 0 {
+		return c.PlaybackFormat
+	}
+	return StreamFormat{
+		Format:   1,
+		Channels: 2,
+		Rate:     44100,
+		Bits:     16,
+	}
 }

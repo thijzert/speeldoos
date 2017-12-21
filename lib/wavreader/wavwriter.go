@@ -3,10 +3,12 @@ package wavreader
 import (
 	"io"
 	"os"
+	"os/exec"
 )
 
 type Writer struct {
 	target        io.WriteCloser
+	targetProcess *exec.Cmd
 	fixedSize     int
 	initialized   bool
 	observedSize  int
@@ -93,7 +95,7 @@ func (w *Writer) Write(buf []byte) (int, error) {
 
 func (w *Writer) Close() error {
 	if !w.initialized {
-		w.Init(0xffffffd3)
+		w.Init(w.observedSize)
 	}
 
 	if f, ok := w.target.(*os.File); ok {
@@ -104,5 +106,13 @@ func (w *Writer) Close() error {
 	}
 
 	rv := w.target.Close()
+
+	if w.targetProcess != nil {
+		if rv == nil {
+			rv = w.targetProcess.Wait()
+		} else {
+			w.targetProcess.Wait()
+		}
+	}
 	return rv
 }

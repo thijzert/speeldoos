@@ -42,8 +42,7 @@ var Config = struct {
 		Discs                                   string
 	}
 	Play struct {
-		SampleRate, Channels, Bits int
-		TapFilename                string
+		TapFilename string
 	}
 	Seedvault struct {
 		InputXml, OutputDir                        string
@@ -105,9 +104,10 @@ func init() {
 	// Settings for `sd play` {{{
 
 	// TODO: Remove 44.1kHz default, and autodetect the sound card's native rate
-	cmdline.IntVar(&Config.Play.SampleRate, "play.rate", 44100, "Playback sample rate.")
-	cmdline.IntVar(&Config.Play.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
-	cmdline.IntVar(&Config.Play.Bits, "play.bits", 16, "Playback audio resolution")
+	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
+	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Rate, "play.rate", 44100, "Playback sample rate.")
+	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Bits, "play.bits", 16, "Playback audio resolution")
+
 	cmdline.StringVar(&Config.Play.TapFilename, "play.debug-tap", "", "For debugging: tee output to a wav file")
 
 	// }}}
@@ -178,8 +178,10 @@ func init() {
 		Config.Tools.MPlayer = "mplayer"
 	}
 
+	Config.WAVConf.PlaybackFormat.Format = 1
 	Config.WAVConf.FlacPath = Config.Tools.Flac
 	Config.WAVConf.LamePath = Config.Tools.Lame
+	Config.WAVConf.MPlayerPath = Config.Tools.MPlayer
 
 	if Config.ConcurrentJobs < 1 {
 		Config.ConcurrentJobs = 1
