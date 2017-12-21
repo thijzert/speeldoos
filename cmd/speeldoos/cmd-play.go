@@ -13,6 +13,7 @@ import (
 
 func play_main(args []string) {
 	l := speeldoos.NewLibrary(Config.LibraryDir)
+	l.WAVConf = Config.WAVConf
 	l.Refresh()
 
 	var s *wavreader.Reader

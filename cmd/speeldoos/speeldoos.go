@@ -9,6 +9,7 @@ import (
 
 	"github.com/thijzert/go-rcfile"
 	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/wavreader"
 )
 
 var Config = struct {
@@ -21,6 +22,7 @@ var Config = struct {
 		ID3v2          string
 		MPlayer        string
 	}
+	WAVConf  wavreader.Config
 	Condense struct {
 		Quality   int
 		OutputDir string
@@ -175,6 +177,9 @@ func init() {
 	if Config.Tools.MPlayer == "" {
 		Config.Tools.MPlayer = "mplayer"
 	}
+
+	Config.WAVConf.FlacPath = Config.Tools.Flac
+	Config.WAVConf.LamePath = Config.Tools.Lame
 
 	if Config.ConcurrentJobs < 1 {
 		Config.ConcurrentJobs = 1

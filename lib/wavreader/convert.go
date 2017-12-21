@@ -100,10 +100,6 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 			wri.CloseWithError(errWrite)
 			return
 		}
-		if errRead != nil {
-			wri.CloseWithError(errRead)
-			return
-		}
 	}
 }
 
