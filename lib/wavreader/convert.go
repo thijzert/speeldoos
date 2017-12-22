@@ -10,46 +10,44 @@ const (
 	msCHUNK = 10
 )
 
-func Convert(r *Reader, channels, rate, bits int) (*Reader, error) {
+func Convert(r *Reader, format StreamFormat) (*Reader, error) {
 	// Fast path: don't convert anything if not absolutely necessary
-	if r.Channels == channels && r.SampleRate == rate && r.BitsPerSample == bits {
-		//return r, nil
+	if r.Format == format {
+		return r, nil
 	}
 
-	if channels < 1 {
+	if format.Channels < 1 {
 		return nil, fmt.Errorf("need at least 1 output channel")
 	}
 
 	rv, wri := Pipe()
-	rv.Channels = channels
-	rv.SampleRate = rate
-	rv.BitsPerSample = bits
+	rv.Format = format
 
-	go doConversion(wri, r, channels, rate, bits)
+	go doConversion(wri, r, format)
 
 	return rv, nil
 }
 
-func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
+func doConversion(wri *io.PipeWriter, r *Reader, format StreamFormat) {
 	// Samples at a time. We're reading the input stream in chunks of, say, 10ms.
-	saatIn, saatOut := (msCHUNK*r.SampleRate+999)/1000, 1+(msCHUNK*rate+999)/1000
+	saatIn, saatOut := (msCHUNK*r.Format.Rate+999)/1000, 1+(msCHUNK*format.Rate+999)/1000
 
 	// Bytes per sample
-	Bin, Bout := (r.BitsPerSample+7)/8, (bits+7)/8
+	Bin, Bout := (r.Format.Bits+7)/8, (format.Bits+7)/8
 
 	// Create buffers
-	bufIn := make([]byte, r.Channels*saatIn*Bin)
-	bufChan := make([][]byte, channels)
-	bufRate := make([]*rateConverter, channels)
-	bufBits := make([][]byte, channels)
-	bufOut := make([]byte, channels*saatOut*Bout)
+	bufIn := make([]byte, r.Format.Channels*saatIn*Bin)
+	bufChan := make([][]byte, format.Channels)
+	bufRate := make([]*rateConverter, format.Channels)
+	bufBits := make([][]byte, format.Channels)
+	bufOut := make([]byte, format.Channels*saatOut*Bout)
 
 	for i, _ := range bufChan {
 		bufChan[i] = make([]byte, saatIn*Bin)
 
-		bufRate[i] = newRateConverter(r, rate, bufChan[i])
+		bufRate[i] = newRateConverter(r, format.Rate, bufChan[i])
 
-		if r.BitsPerSample == bits {
+		if r.Format.Bits == format.Bits {
 			// Optimization: since we're not converting, just reuse the last output buffer
 			bufBits[i] = bufRate[i].Output
 		} else {
@@ -82,7 +80,7 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 		}
 
 		for i, ch := range bufRate {
-			nBits, err = convertBits(bufBits[i], ch.Output[:nRate], r, Bin, Bout, bits)
+			nBits, err = convertBits(bufBits[i], ch.Output[:nRate], r, Bin, Bout, format.Bits)
 			if err != nil {
 				wri.CloseWithError(err)
 				return
@@ -104,18 +102,18 @@ func doConversion(wri *io.PipeWriter, r *Reader, channels, rate, bits int) {
 }
 
 func monoChannels(out [][]byte, in []byte, r *Reader, Bin int) (int, error) {
-	if r.Channels == 1 {
+	if r.Format.Channels == 1 {
 		// Copy mono input data to all output channels
 		for _, b := range out {
 			copy(b, in)
 		}
 		return len(in), nil
-	} else if r.Channels == len(out) {
+	} else if r.Format.Channels == len(out) {
 		// Spice interleaved sample data into per-channel buffers
 		j := 0
-		for j*r.Channels < len(in) {
+		for j*r.Format.Channels < len(in) {
 			for i, ch := range out {
-				ioff := j*r.Channels + i*Bin
+				ioff := j*r.Format.Channels + i*Bin
 				copy(ch[j:], in[ioff:ioff+Bin])
 			}
 			j += Bin
@@ -136,10 +134,10 @@ type rateConverter struct {
 
 func newRateConverter(r *Reader, rate int, input []byte) *rateConverter {
 	rc := &rateConverter{
-		bin:     (r.BitsPerSample + 7) / 8,
-		rateIn:  r.SampleRate,
+		bin:     (r.Format.Bits + 7) / 8,
+		rateIn:  r.Format.Rate,
 		rateOut: rate,
-		saatIn:  (msCHUNK*r.SampleRate + 999) / 1000,
+		saatIn:  (msCHUNK*r.Format.Rate + 999) / 1000,
 		saatOut: 1 + (msCHUNK*rate+999)/1000,
 	}
 
@@ -199,14 +197,14 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 }
 
 func convertBits(out []byte, in []byte, r *Reader, Bin, Bout, bits int) (int, error) {
-	if r.BitsPerSample == bits {
+	if r.Format.Bits == bits {
 		// We've caught this case by reusing buffers
 		return len(in), nil
 	}
 
 	// FIXME: handle bit lengths that aren't multiples of 8 bits. (Do those exist?)
 
-	if r.BitsPerSample > bits {
+	if r.Format.Bits > bits {
 		// Discard input bits in the output stream
 		i, n := 0, 0
 

@@ -12,20 +12,14 @@ type Writer struct {
 	fixedSize     int
 	initialized   bool
 	observedSize  int
-	FormatType    int
-	Channels      int
-	SampleRate    int
-	BitsPerSample int
+	Format        StreamFormat
 }
 
-func NewWriter(target io.WriteCloser, formatType, channels, sampleRate, bitsPerSample int) *Writer {
+func NewWriter(target io.WriteCloser, format StreamFormat) *Writer {
 	rv := &Writer{
-		target:        target,
-		initialized:   false,
-		FormatType:    formatType,
-		Channels:      channels,
-		SampleRate:    sampleRate,
-		BitsPerSample: bitsPerSample,
+		target:      target,
+		initialized: false,
+		Format:      format,
 	}
 
 	return rv
@@ -39,12 +33,12 @@ func (w *Writer) Init(fixedSize int) error {
 	stoa(b[8:12], "WAVE")
 	stoa(b[12:16], "fmt ")
 	itoa(b[16:20], 16)
-	itoa(b[20:22], w.FormatType)
-	itoa(b[22:24], w.Channels)
-	itoa(b[24:28], w.SampleRate)
-	itoa(b[28:32], (w.SampleRate*w.BitsPerSample*w.Channels)/8)
-	itoa(b[32:34], (w.BitsPerSample*w.Channels)/8)
-	itoa(b[34:36], w.BitsPerSample)
+	itoa(b[20:22], w.Format.Format)
+	itoa(b[22:24], w.Format.Channels)
+	itoa(b[24:28], w.Format.Rate)
+	itoa(b[28:32], (w.Format.Channels*w.Format.Rate*w.Format.Bits+7)/8)
+	itoa(b[32:34], (w.Format.Channels*w.Format.Bits+7)/8)
+	itoa(b[34:36], w.Format.Bits)
 	stoa(b[36:40], "data")
 	itoa(b[40:44], fixedSize)
 

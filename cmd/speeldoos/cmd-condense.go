@@ -81,7 +81,7 @@ func (job condenseJob) Run(h hivemind.JC) error {
 			defer wav.Close()
 
 			if wout == nil {
-				wout, err = job.Wavconf.ToMP3(out, wav.Channels, wav.SampleRate, wav.BitsPerSample)
+				wout, err = job.Wavconf.ToMP3(out, wav.Format)
 				if err != nil {
 					h.Println(err.Error())
 					continue

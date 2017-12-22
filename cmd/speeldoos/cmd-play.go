@@ -30,7 +30,7 @@ firstPerformance:
 		log.Fatal(err)
 	}
 
-	aud, err := wavreader.Convert(s, Config.WAVConf.PlaybackFormat.Channels, Config.WAVConf.PlaybackFormat.Rate, Config.WAVConf.PlaybackFormat.Bits)
+	aud, err := wavreader.Convert(s, Config.WAVConf.PlaybackFormat)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +46,7 @@ firstPerformance:
 		var tap *os.File
 		tap, err = os.Create(Config.Play.TapFilename)
 		if err == nil {
-			tapOut := wavreader.NewWriter(tap, 1, Config.WAVConf.PlaybackFormat.Channels, Config.WAVConf.PlaybackFormat.Rate, Config.WAVConf.PlaybackFormat.Bits)
+			tapOut := wavreader.NewWriter(tap, Config.WAVConf.PlaybackFormat)
 			defer tapOut.Close()
 
 			out := io.MultiWriter(tapOut, output)

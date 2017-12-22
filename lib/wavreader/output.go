@@ -45,10 +45,7 @@ func (c Config) AudioOutput() (*Writer, error) {
 		target:        stdin,
 		targetProcess: mpl,
 		initialized:   true,
-		FormatType:    format.Format,
-		Channels:      format.Channels,
-		SampleRate:    format.Rate,
-		BitsPerSample: format.Bits,
+		Format:        format,
 	}
 
 	return rv, nil

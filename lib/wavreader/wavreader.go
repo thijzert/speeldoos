@@ -12,15 +12,12 @@ var (
 )
 
 type Reader struct {
-	source        io.ReadCloser
-	errorState    error
-	initialized   bool
-	Size          int
-	bytesRead     int
-	FormatType    int
-	Channels      int
-	SampleRate    int
-	BitsPerSample int
+	source      io.ReadCloser
+	errorState  error
+	initialized bool
+	Size        int
+	bytesRead   int
+	Format      StreamFormat
 }
 
 func New(source io.ReadCloser) *Reader {
@@ -72,8 +69,8 @@ func (w *Reader) Init() {
 
 	//log.Printf("Format header length: %d bytes", atoi(b[16:20]))
 	dataChunkStart := 36
-	w.FormatType = atoi(b[20:22])
-	if w.FormatType == 0xfffe {
+	w.Format.Format = atoi(b[20:22])
+	if w.Format.Format == 0xfffe {
 		b = b[:68]
 		_, err := io.ReadFull(w.source, b[44:])
 		if err != nil {
@@ -97,29 +94,35 @@ func (w *Reader) Init() {
 		// Check the extended format GUID
 		if string(b[44:60]) == "\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71" {
 			// Whew, still PCM
-			w.FormatType = 1
+			w.Format.Format = 1
 		}
 	}
-	if w.FormatType != 1 {
-		log.Printf("Expected format PCM (1); got unknown format ID %d", w.FormatType)
+	if w.Format.Format != 1 {
+		log.Printf("Expected format PCM (1); got unknown format ID %d", w.Format.Format)
 		w.errorState = parseError
 		return
 	}
 
-	w.Channels = atoi(b[22:24])
-	w.SampleRate = atoi(b[24:28])
-	w.BitsPerSample = atoi(b[34:36])
+	w.Format.Channels = atoi(b[22:24])
+	w.Format.Rate = atoi(b[24:28])
+	w.Format.Bits = atoi(b[34:36])
 
 	bytesPerSecond := atoi(b[28:32])
-	if bytesPerSecond*8 != (w.BitsPerSample * w.SampleRate * w.Channels) {
-		log.Printf("Invalid number of bytes per second: got %d; expected %d (=%d*%d*%d/8)", bytesPerSecond, (w.BitsPerSample*w.SampleRate*w.Channels)/8, w.BitsPerSample, w.SampleRate, w.Channels)
+	expectedBytesPerSecond := (w.Format.Channels*w.Format.Rate*w.Format.Bits + 7) / 8
+	if bytesPerSecond != expectedBytesPerSecond {
+		log.Printf("Invalid number of bytes per second: got %d; expected %d (=%d*%d*%d/8)",
+			bytesPerSecond, expectedBytesPerSecond,
+			w.Format.Channels, w.Format.Rate, w.Format.Bits)
 		w.errorState = parseError
 		return
 	}
 
 	bytesPerSample := atoi(b[32:34])
-	if bytesPerSample*8 != (w.BitsPerSample * w.Channels) {
-		log.Printf("Invalid number of bytes per sample: got %d; expected %d (=%d*%d/8)", bytesPerSample, (w.BitsPerSample*w.Channels)/8, w.BitsPerSample, w.Channels)
+	expectedBytesPerSample := (w.Format.Channels*w.Format.Bits + 7) / 8
+	if bytesPerSample != expectedBytesPerSample {
+		log.Printf("Invalid number of bytes per sample: got %d; expected %d (=%d*%d/8)",
+			bytesPerSample, expectedBytesPerSample,
+			w.Format.Channels, w.Format.Bits)
 		w.errorState = parseError
 		return
 	}
