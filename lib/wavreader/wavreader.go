@@ -25,14 +25,18 @@ func New(source io.ReadCloser) *Reader {
 	return rv
 }
 
-func Pipe() (*Reader, *io.PipeWriter) {
+func Pipe() (*Reader, *Writer) {
 	pr, pw := io.Pipe()
 	rv := &Reader{
 		source:      pr,
 		initialized: true,
 	}
+	rw := &Writer{
+		target:      pw,
+		initialized: true,
+	}
 
-	return rv, pw
+	return rv, rw
 }
 
 func (w *Reader) Init() {

@@ -13,6 +13,7 @@ type Writer struct {
 	initialized   bool
 	observedSize  int
 	Format        StreamFormat
+	errorState    error
 }
 
 func NewWriter(target io.WriteCloser, format StreamFormat) *Writer {
@@ -78,6 +79,9 @@ func writeAll(wr io.Writer, buf []byte) (int, error) {
 }
 
 func (w *Writer) Write(buf []byte) (int, error) {
+	if w.errorState != nil {
+		return 0, w.errorState
+	}
 	if !w.initialized {
 		w.Init(0xffffffd3)
 	}
@@ -88,9 +92,15 @@ func (w *Writer) Write(buf []byte) (int, error) {
 }
 
 func (w *Writer) Close() error {
+	return w.CloseWithError(io.EOF)
+}
+
+func (w *Writer) CloseWithError(er error) error {
 	if !w.initialized {
 		w.Init(w.observedSize)
 	}
+
+	w.errorState = er
 
 	if f, ok := w.target.(*os.File); ok {
 		_, err := f.Seek(0, 0)
@@ -99,7 +109,12 @@ func (w *Writer) Close() error {
 		}
 	}
 
-	rv := w.target.Close()
+	var rv error
+	if pipe, ok := w.target.(*io.PipeWriter); ok {
+		rv = pipe.CloseWithError(er)
+	} else {
+		rv = w.target.Close()
+	}
 
 	if w.targetProcess != nil {
 		if rv == nil {
@@ -107,6 +122,12 @@ func (w *Writer) Close() error {
 		} else {
 			w.targetProcess.Wait()
 		}
+	}
+
+	if er != nil {
+		return er
+	} else if rv != nil {
+		w.errorState = rv
 	}
 	return rv
 }
