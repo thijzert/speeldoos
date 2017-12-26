@@ -171,6 +171,22 @@ func (w *Reader) Read(b []byte) (int, error) {
 	return n, err
 }
 
+func (r *Reader) WriteTo(w io.Writer) (int64, error) {
+	if wri, ok := w.(*Writer); ok {
+		if wri.Format == r.Format {
+			return io.Copy(wri.target, r)
+		} else {
+			written, err := doConversion(wri, r)
+			if err == io.EOF {
+				err = nil
+			}
+			return written, err
+		}
+	} else {
+		return io.Copy(w, r.source)
+	}
+}
+
 func (w *Reader) Close() error {
 	if w.errorState != nil {
 		return w.errorState

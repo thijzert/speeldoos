@@ -30,19 +30,19 @@ firstPerformance:
 		log.Fatal(err)
 	}
 
-	aud, err := wavreader.Convert(s, Config.WAVConf.PlaybackFormat)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	output, err := Config.WAVConf.AudioOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if Config.Play.TapFilename == "" {
-		_, err = io.Copy(output, aud)
+		_, err = io.Copy(output, s)
 	} else {
+		aud, err := wavreader.Convert(s, Config.WAVConf.PlaybackFormat)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		var tap *os.File
 		tap, err = os.Create(Config.Play.TapFilename)
 		if err == nil {

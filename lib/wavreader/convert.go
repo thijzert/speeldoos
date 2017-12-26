@@ -27,7 +27,9 @@ func Convert(r *Reader, format StreamFormat) (*Reader, error) {
 	return rv, nil
 }
 
-func doConversion(wri *Writer, r *Reader) {
+func doConversion(wri *Writer, r *Reader) (int64, error) {
+	var written int64
+
 	// Samples at a time. We're reading the input stream in chunks of, say, 10ms.
 	saatIn, saatOut := (msCHUNK*r.Format.Rate+999)/1000, 1+(msCHUNK*wri.Format.Rate+999)/1000
 
@@ -61,20 +63,20 @@ func doConversion(wri *Writer, r *Reader) {
 		n, errRead := io.ReadFull(r, bufIn)
 		if n == 0 && errRead != nil {
 			wri.CloseWithError(errRead)
-			return
+			return written, errRead
 		}
 
 		nMono, err = monoChannels(bufChan, bufIn[:n], r, Bin)
 		if err != nil {
 			wri.CloseWithError(err)
-			return
+			return written, err
 		}
 
 		for i, rc := range bufRate {
 			nRate, err = rc.convert(bufChan[i][:nMono])
 			if err != nil {
 				wri.CloseWithError(err)
-				return
+				return written, err
 			}
 		}
 
@@ -82,20 +84,21 @@ func doConversion(wri *Writer, r *Reader) {
 			nBits, err = convertBits(bufBits[i], ch.Output[:nRate], r, Bin, Bout, wri.Format.Bits)
 			if err != nil {
 				wri.CloseWithError(err)
-				return
+				return written, err
 			}
 		}
 
 		n, err = interleave(bufOut, bufBits, nBits, Bout)
 		if err != nil {
 			wri.CloseWithError(err)
-			return
+			return written, err
 		}
 
-		_, errWrite := wri.Write(bufOut[:n])
+		n, errWrite := wri.Write(bufOut[:n])
+		written += int64(n)
 		if errWrite != nil {
 			wri.CloseWithError(errWrite)
-			return
+			return written, errWrite
 		}
 	}
 }
