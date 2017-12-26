@@ -53,12 +53,6 @@ func (w *Writer) Init(fixedSize int) error {
 	return nil
 }
 
-func itoa(a []byte, i int) {
-	for j, _ := range a {
-		a[j] = byte(i & 0xff)
-		i >>= 8
-	}
-}
 func stoa(a []byte, s string) {
 	b := []byte(s)
 	for i, c := range b {

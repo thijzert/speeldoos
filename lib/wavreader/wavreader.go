@@ -142,14 +142,6 @@ func (w *Reader) Init() {
 	}
 }
 
-func atoi(buf []byte) int {
-	var rv int = 0
-	for i, b := range buf {
-		rv |= int(b) << uint(i*8)
-	}
-	return rv
-}
-
 func (w *Reader) Read(b []byte) (int, error) {
 	if w.errorState != nil {
 		return 0, w.errorState

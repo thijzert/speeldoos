@@ -3,6 +3,7 @@ package wavreader
 import (
 	"fmt"
 	"io"
+	"math"
 )
 
 const (
@@ -132,6 +133,9 @@ type rateConverter struct {
 	rateIn, rateOut int
 	bin             int
 	saatIn, saatOut int
+	float           []float64
+	t               float64
+	stepIn, stepOut float64
 }
 
 func newRateConverter(r *Reader, rate int, input []byte) *rateConverter {
@@ -148,6 +152,14 @@ func newRateConverter(r *Reader, rate int, input []byte) *rateConverter {
 		rc.Output = input
 	} else {
 		rc.Output = make([]byte, rc.saatOut*rc.bin)
+
+		if rc.rateIn > rc.rateOut && (rc.rateIn%rc.rateOut) == 0 {
+			// Fast path
+		} else {
+			rc.float = make([]float64, rc.saatIn+10)
+			rc.stepIn = 1.0 / float64(rc.rateIn)
+			rc.stepOut = 1.0 / float64(rc.rateOut)
+		}
 	}
 
 	return rc
@@ -178,24 +190,65 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 		}
 
 		return n, nil
-	} else if rc.rateIn < rc.rateOut && (rc.rateOut%rc.rateIn) == 0 {
-		// Another fast path: approximate the upscaled version with squarewaves
-
-		// Repeat each sample c times
-		c := rc.rateOut / rc.rateIn
-
-		i := 0
-		for i < len(in) {
-			for j := 0; j < c; j++ {
-				copy(rc.Output[i*c+j*rc.bin:], in[i:i+rc.bin])
-			}
-			i += rc.bin
-		}
-
-		return len(in) * c, nil
 	}
 
-	return 0, fmt.Errorf("sample rate conversion is not implemented")
+	// Interpolate using float squarewaves
+	// FIXME: I'm quite sure methods exist that are better suited to converting audio.
+
+	fin := 10
+	for i := 0; i < len(in); i += rc.bin {
+		var s int
+		if rc.bin == 1 {
+			s = int(in[i])
+		} else {
+			s = int(atosi(in[i : i+rc.bin]))
+		}
+		rc.float[fin] = float64(s)
+		fin++
+	}
+
+	i := 0
+	li := len(in)
+	if li >= rc.saatIn-5 {
+		li = rc.saatIn - 5
+	}
+	t, tmax := -5.0*rc.stepIn, float64(li)*rc.stepIn
+	if rc.t == 0.0 {
+		t = 0.0
+	}
+	for t < tmax {
+		t0 := t / rc.stepIn
+		a0 := math.Trunc(t0)
+		b0 := t0 - a0
+
+		x := float64(0)
+
+		j0 := 10 + int(a0)
+		for j := j0 - 4; j <= j0+4; j++ {
+			t1 := float64(-1*j0) + b0
+			x += square(rc.float[j], t1)
+		}
+
+		if rc.bin == 1 {
+			itoa(rc.Output[i:i+rc.bin], int(x))
+		} else {
+			sitoa(rc.Output[i:i+rc.bin], int(x))
+		}
+
+		i += rc.bin
+		t += rc.stepOut
+	}
+
+	return i, nil
+}
+
+// Interpolation using squarewaves
+func square(p, t float64) float64 {
+	if t >= 0.0 && p < 1.0 {
+		return p
+	} else {
+		return 0.0
+	}
 }
 
 func convertBits(out []byte, in []byte, r *Reader, Bin, Bout, bits int) (int, error) {
