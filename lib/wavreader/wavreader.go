@@ -56,11 +56,19 @@ func (w *Reader) Init() {
 		return
 	}
 
+	totalLength := atoi(b[4:8])
+
 	if string(b[8:12]) != "WAVE" {
 		w.errorState = parseError
 		return
 	}
 	if string(b[12:15]) != "fmt" {
+		w.errorState = parseError
+		return
+	}
+
+	headerLength := atoi(b[16:20])
+	if headerLength < 16 {
 		w.errorState = parseError
 		return
 	}
@@ -126,6 +134,10 @@ func (w *Reader) Init() {
 	}
 
 	w.Size = atoi(dc[4:8])
+
+	if totalLength != w.Size+headerLength+20 {
+		w.errorState = parseError
+	}
 }
 
 func atoi(buf []byte) int {
