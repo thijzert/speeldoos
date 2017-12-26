@@ -3,7 +3,6 @@ package wavreader
 import (
 	"fmt"
 	"io"
-	"log"
 )
 
 var (
@@ -53,25 +52,19 @@ func (w *Reader) Init() {
 	}
 
 	if string(b[0:4]) != "RIFF" {
-		log.Printf("Expected: \"RIFF\"; got: \"%s\" (%02x)", b[0:4], b[0:4])
 		w.errorState = parseError
 		return
 	}
 
-	//log.Printf("total file size: %d bytes", atoi(b[4:8])+8)
-
 	if string(b[8:12]) != "WAVE" {
-		log.Printf("Expected: \"WAVE\"; got: \"%s\" (%02x)", b[8:12], b[8:12])
 		w.errorState = parseError
 		return
 	}
 	if string(b[12:15]) != "fmt" {
-		log.Printf("Expected: \"fmt\\0\" or \"fmt \"; got: \"%s\" (%02x)", b[12:16], b[12:16])
 		w.errorState = parseError
 		return
 	}
 
-	//log.Printf("Format header length: %d bytes", atoi(b[16:20]))
 	dataChunkStart := 36
 	w.Format.Format = atoi(b[20:22])
 	if w.Format.Format == 0xfffe {
@@ -102,7 +95,6 @@ func (w *Reader) Init() {
 		}
 	}
 	if w.Format.Format != 1 {
-		log.Printf("Expected format PCM (1); got unknown format ID %d", w.Format.Format)
 		w.errorState = parseError
 		return
 	}
@@ -114,9 +106,6 @@ func (w *Reader) Init() {
 	bytesPerSecond := atoi(b[28:32])
 	expectedBytesPerSecond := (w.Format.Channels*w.Format.Rate*w.Format.Bits + 7) / 8
 	if bytesPerSecond != expectedBytesPerSecond {
-		log.Printf("Invalid number of bytes per second: got %d; expected %d (=%d*%d*%d/8)",
-			bytesPerSecond, expectedBytesPerSecond,
-			w.Format.Channels, w.Format.Rate, w.Format.Bits)
 		w.errorState = parseError
 		return
 	}
@@ -124,9 +113,6 @@ func (w *Reader) Init() {
 	bytesPerSample := atoi(b[32:34])
 	expectedBytesPerSample := (w.Format.Channels*w.Format.Bits + 7) / 8
 	if bytesPerSample != expectedBytesPerSample {
-		log.Printf("Invalid number of bytes per sample: got %d; expected %d (=%d*%d/8)",
-			bytesPerSample, expectedBytesPerSample,
-			w.Format.Channels, w.Format.Bits)
 		w.errorState = parseError
 		return
 	}
@@ -135,7 +121,6 @@ func (w *Reader) Init() {
 	dc := b[dataChunkStart:]
 
 	if string(dc[0:4]) != "data" {
-		log.Printf("Expected: \"data\" or \"fmt \"; got: \"%s\" (%02x)", dc[0:4], dc[0:4])
 		w.errorState = parseError
 		return
 	}
