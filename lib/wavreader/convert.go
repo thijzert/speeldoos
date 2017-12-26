@@ -20,9 +20,7 @@ func Convert(r *Reader, format StreamFormat) (*Reader, error) {
 		return nil, fmt.Errorf("need at least 1 output channel")
 	}
 
-	rv, wri := Pipe()
-	rv.Format = format
-	wri.Format = format
+	rv, wri := Pipe(format)
 
 	go doConversion(wri, r)
 

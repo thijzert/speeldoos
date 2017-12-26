@@ -24,15 +24,17 @@ func New(source io.ReadCloser) *Reader {
 	return rv
 }
 
-func Pipe() (*Reader, *Writer) {
+func Pipe(format StreamFormat) (*Reader, *Writer) {
 	pr, pw := io.Pipe()
 	rv := &Reader{
 		source:      pr,
 		initialized: true,
+		Format:      format,
 	}
 	rw := &Writer{
 		target:      pw,
 		initialized: true,
+		Format:      format,
 	}
 
 	return rv, rw

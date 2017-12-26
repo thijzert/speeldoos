@@ -114,8 +114,7 @@ func (l *Library) GetWAV(pf Performance) (*wavreader.Reader, error) {
 		fixedSize += ww.Size
 	}
 
-	rv, wri := wavreader.Pipe()
-	rv.Format = format
+	rv, wri := wavreader.Pipe(format)
 	rv.Size = fixedSize
 
 	go func() {
