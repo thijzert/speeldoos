@@ -194,8 +194,8 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 		return n, nil
 	}
 
-	// Interpolate using float squarewaves
-	// FIXME: I'm quite sure methods exist that are better suited to converting audio.
+	// Interpolate using Lanczos interpolation
+	// FIXME: I'm quite sure methods exist that are much better suited to converting audio.
 
 	fin := 10
 	li := len(in)
@@ -234,7 +234,7 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 		j0 := int(j0a) + 5
 		tlocal := j - j0a
 		for jj := -4; jj <= 4; jj++ {
-			x += square(rc.float[j0+jj], float64(jj)-tlocal)
+			x += lanczos3(rc.float[j0+jj], float64(jj)-tlocal)
 		}
 
 		if rc.bin == 1 {
@@ -259,6 +259,20 @@ func square(p, t float64) float64 {
 		return p
 	} else {
 		return 0.0
+	}
+}
+
+// Interpolation using Lanczos kernel with a=3
+func lanczos3(p, t float64) float64 {
+	// The Lanczos kernel is symmetric in t=0
+	t = math.Abs(t)
+
+	if t < 1e-3 {
+		return p
+	} else if t > 3.0 {
+		return 0.0
+	} else {
+		return p * ((3.0 * math.Sin(math.Pi*t) * math.Sin(math.Pi*t/3.0)) / (math.Pi * math.Pi * t * t))
 	}
 }
 
