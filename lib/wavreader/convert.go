@@ -198,22 +198,22 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 	// FIXME: I'm quite sure methods exist that are much better suited to converting audio.
 
 	fin := 10
-	li := len(in)
+	li := len(in) / rc.bin
 	if li == 0 {
 		// Finalize: empty our saved buffer
-		li = 5 * rc.bin
+		li = 5
 
-		for i := 0; i < li; i += rc.bin {
+		for i := 0; i < li; i++ {
 			rc.float[fin] = 0.0
 			fin++
 		}
 	} else {
-		for i := 0; i < li; i += rc.bin {
+		for i := 0; i < li; i++ {
 			var s int
 			if rc.bin == 1 {
 				s = int(in[i])
 			} else {
-				s = int(atosi(in[i : i+rc.bin]))
+				s = int(atosi(in[i*rc.bin : (i+1)*rc.bin]))
 			}
 			rc.float[fin] = float64(s)
 			fin++
@@ -233,7 +233,7 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 		j0a := math.Floor(j + 0.5)
 		j0 := int(j0a) + 5
 		tlocal := j - j0a
-		for jj := -4; jj <= 4; jj++ {
+		for jj := -3; jj <= 3; jj++ {
 			x += lanczos3(rc.float[j0+jj], float64(jj)-tlocal)
 		}
 
@@ -247,7 +247,7 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 		rc.t += rc.stepOut
 	}
 
-	rc.t0 += float64(len(in)) * rc.stepIn
+	rc.t0 += float64(li) * rc.stepIn
 	copy(rc.float[:10], rc.float[len(rc.float)-10:])
 
 	return i, nil
