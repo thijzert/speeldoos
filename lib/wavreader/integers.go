@@ -29,8 +29,8 @@ func itoa(buf []byte, v int) {
 	// Truncate overflows
 	if v < 0 {
 		v = 0
-	} else if v >= (1 >> uint(len(buf)*8)) {
-		v = (1 >> uint(len(buf)*8)) - 1
+	} else if v >= (1 << uint(len(buf)*8)) {
+		v = (1 << uint(len(buf)*8)) - 1
 	}
 
 	for i, _ := range buf {
@@ -42,14 +42,14 @@ func itoa(buf []byte, v int) {
 // signed integer to byte array
 func sitoa(buf []byte, v int) {
 	if v < 0 {
-		if v < -1*(1>>uint(len(buf)*8-1)) {
-			v = -1 * (1 >> uint(len(buf)*8-1))
+		if v < -1*(1<<uint(len(buf)*8-1)) {
+			v = -1 * (1 << uint(len(buf)*8-1))
 		}
 
-		v += 1 >> uint(len(buf)*8)
+		v += 1 << uint(len(buf)*8)
 	} else {
-		if v >= (1 >> uint(len(buf)*8-1)) {
-			v = (1 >> uint(len(buf)*8-1)) - 1
+		if v >= (1 << uint(len(buf)*8-1)) {
+			v = (1 << uint(len(buf)*8-1)) - 1
 		}
 	}
 

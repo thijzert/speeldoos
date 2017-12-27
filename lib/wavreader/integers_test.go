@@ -28,3 +28,19 @@ func tatosi(t *testing.T, buf []byte, exp int) {
 		t.Errorf("atosi failed for %02x: expected %d (%02x); got %d (%02x)", buf, exp, exp, i, i)
 	}
 }
+
+func TestItoa8bit(t *testing.T) {
+	titoa8(t, 0, 0)
+	titoa8(t, 6, 6)
+	titoa8(t, 200, 200)
+	titoa8(t, -128, 0)
+	titoa8(t, 3000, 255)
+}
+
+func titoa8(t *testing.T, v int, exp byte) {
+	b := []byte{3}
+	itoa(b, v)
+	if b[0] != exp {
+		t.Errorf("itoa(8) failed, expected %d (%02x), got %d (%02x)", exp, exp, b[0], b[0])
+	}
+}
