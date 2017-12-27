@@ -61,13 +61,9 @@ func doConversion(wri *Writer, r *Reader) (int64, error) {
 	var nMono, nRate, nBits int
 
 	for {
-		n, errRead := io.ReadFull(r, bufIn)
-		if n == 0 && errRead != nil {
-			wri.CloseWithError(errRead)
-			return written, errRead
-		}
+		nRead, errRead := io.ReadFull(r, bufIn)
 
-		nMono, err = monoChannels(bufChan, bufIn[:n], r, Bin)
+		nMono, err = monoChannels(bufChan, bufIn[:nRead], r, Bin)
 		if err != nil {
 			wri.CloseWithError(err)
 			return written, err
@@ -89,7 +85,7 @@ func doConversion(wri *Writer, r *Reader) (int64, error) {
 			}
 		}
 
-		n, err = interleave(bufOut, bufBits, nBits, Bout)
+		n, err := interleave(bufOut, bufBits, nBits, Bout)
 		if err != nil {
 			wri.CloseWithError(err)
 			return written, err
@@ -100,6 +96,10 @@ func doConversion(wri *Writer, r *Reader) (int64, error) {
 		if errWrite != nil {
 			wri.CloseWithError(errWrite)
 			return written, errWrite
+		}
+		if nRead == 0 && errRead != nil {
+			wri.CloseWithError(errRead)
+			return written, errRead
 		}
 	}
 }
@@ -134,7 +134,7 @@ type rateConverter struct {
 	bin             int
 	saatIn, saatOut int
 	float           []float64
-	t               float64
+	t, t0           float64
 	stepIn, stepOut float64
 }
 
@@ -159,6 +159,8 @@ func newRateConverter(r *Reader, rate int, input []byte) *rateConverter {
 			rc.float = make([]float64, rc.saatIn+10)
 			rc.stepIn = 1.0 / float64(rc.rateIn)
 			rc.stepOut = 1.0 / float64(rc.rateOut)
+			rc.t = 0.0
+			rc.t0 = -5.0 * rc.stepIn
 		}
 	}
 
@@ -196,37 +198,43 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 	// FIXME: I'm quite sure methods exist that are better suited to converting audio.
 
 	fin := 10
-	for i := 0; i < len(in); i += rc.bin {
-		var s int
-		if rc.bin == 1 {
-			s = int(in[i])
-		} else {
-			s = int(atosi(in[i : i+rc.bin]))
+	li := len(in)
+	if li == 0 {
+		// Finalize: empty our saved buffer
+		li = 5 * rc.bin
+
+		for i := 0; i < li; i += rc.bin {
+			rc.float[fin] = 0.0
+			fin++
 		}
-		rc.float[fin] = float64(s)
-		fin++
+	} else {
+		for i := 0; i < li; i += rc.bin {
+			var s int
+			if rc.bin == 1 {
+				s = int(in[i])
+			} else {
+				s = int(atosi(in[i : i+rc.bin]))
+			}
+			rc.float[fin] = float64(s)
+			fin++
+		}
 	}
 
 	i := 0
-	li := len(in)
-	if li >= rc.saatIn-5 {
-		li = rc.saatIn - 5
-	}
-	t, tmax := -5.0*rc.stepIn, float64(li)*rc.stepIn
-	if rc.t == 0.0 {
-		t = 0.0
-	}
-	for t < tmax {
-		t0 := t / rc.stepIn
-		a0 := math.Trunc(t0)
-		b0 := t0 - a0
 
-		x := float64(0)
+	tmax := rc.t0 + float64(li)*rc.stepIn
 
-		j0 := 10 + int(a0)
-		for j := j0 - 4; j <= j0+4; j++ {
-			t1 := float64(-1*j0) + b0
-			x += square(rc.float[j], t1)
+	var x float64
+	for rc.t < tmax {
+
+		x = 0.0
+
+		j := ((rc.t - rc.t0) / rc.stepIn)
+		j0a := math.Floor(j + 0.5)
+		j0 := int(j0a) + 5
+		tlocal := j - j0a
+		for jj := -4; jj <= 4; jj++ {
+			x += square(rc.float[j0+jj], float64(jj)-tlocal)
 		}
 
 		if rc.bin == 1 {
@@ -236,15 +244,18 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 		}
 
 		i += rc.bin
-		t += rc.stepOut
+		rc.t += rc.stepOut
 	}
+
+	rc.t0 += float64(len(in)) * rc.stepIn
+	copy(rc.float[:10], rc.float[len(rc.float)-10:])
 
 	return i, nil
 }
 
 // Interpolation using squarewaves
 func square(p, t float64) float64 {
-	if t >= 0.0 && p < 1.0 {
+	if t >= 0.0 && t < 1.0 {
 		return p
 	} else {
 		return 0.0
