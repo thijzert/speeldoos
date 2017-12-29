@@ -1,61 +1,64 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
-	"os"
 
 	"github.com/thijzert/speeldoos"
+	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader"
 )
 
+type playlistItem struct {
+	Performance speeldoos.Performance
+	Wav         *wavreader.Reader
+}
+
 func play_main(args []string) {
+	playlist := make(chan playlistItem)
+
 	l := speeldoos.NewLibrary(Config.LibraryDir)
 	l.WAVConf = Config.WAVConf
 	l.Refresh()
 
-	var s *wavreader.Reader
-	var err error = fmt.Errorf("no performances found")
-firstPerformance:
+	pfii := make([]speeldoos.Performance, 0, 50)
+
 	for _, car := range l.Carriers {
 		for _, pf := range car.Carrier.Performances {
-			s, err = l.GetWAV(pf)
-			if err == nil {
-				break firstPerformance
-			}
+			pfii = append(pfii, pf)
 		}
 	}
-	if err != nil {
-		log.Fatal(err)
+
+	if len(pfii) == 0 {
+		log.Fatal("No performances found in your library.")
 	}
+
+	go func() {
+		// Stopgap measure: stop after playing 100 performances.
+		for k := 0; k < 100; k++ {
+			i := rand.Intn(len(pfii))
+			w, err := l.GetWAV(pfii[i])
+			if err != nil {
+				log.Printf("%v", err)
+				continue
+			}
+			playlist <- playlistItem{Performance: pfii[i], Wav: w}
+		}
+	}()
 
 	output, err := Config.WAVConf.AudioOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if Config.Play.TapFilename == "" {
-		_, err = io.Copy(output, s)
-	} else {
-		aud, err := wavreader.Convert(s, Config.WAVConf.PlaybackFormat)
+	for item := range playlist {
+		log.Printf("Now playing: %s - %s", item.Performance.Work.Composer.Name, item.Performance.Work.Title[0].Title)
+		_, err = io.Copy(output, item.Wav)
+
 		if err != nil {
 			log.Fatal(err)
 		}
-
-		var tap *os.File
-		tap, err = os.Create(Config.Play.TapFilename)
-		if err == nil {
-			tapOut := wavreader.NewWriter(tap, Config.WAVConf.PlaybackFormat)
-			defer tapOut.Close()
-
-			out := io.MultiWriter(tapOut, output)
-			_, err = io.Copy(out, aud)
-		}
-	}
-
-	if err != nil {
-		log.Fatal(err)
+		item.Wav.Close()
 	}
 
 	output.Close()

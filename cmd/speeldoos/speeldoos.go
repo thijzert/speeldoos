@@ -41,9 +41,6 @@ var Config = struct {
 		Soloist, Orchestra, Ensemble, Conductor string
 		Discs                                   string
 	}
-	Play struct {
-		TapFilename string
-	}
 	Seedvault struct {
 		InputXml, OutputDir                        string
 		CoverImage, InlayImage, DiscImage, Booklet string
@@ -107,8 +104,6 @@ func init() {
 	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
 	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Rate, "play.rate", 44100, "Playback sample rate.")
 	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Bits, "play.bits", 16, "Playback audio resolution")
-
-	cmdline.StringVar(&Config.Play.TapFilename, "play.debug-tap", "", "For debugging: tee output to a wav file")
 
 	// }}}
 	// Settings pertaining to `sd seedvault` {{{
