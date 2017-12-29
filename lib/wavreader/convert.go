@@ -98,7 +98,9 @@ func doConversion(wri *Writer, r *Reader) (int64, error) {
 			return written, errWrite
 		}
 		if nRead == 0 && errRead != nil {
-			wri.CloseWithError(errRead)
+			if errRead != io.EOF {
+				wri.CloseWithError(errRead)
+			}
 			return written, errRead
 		}
 	}
