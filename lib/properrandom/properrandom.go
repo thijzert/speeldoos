@@ -54,7 +54,7 @@ func Uint32() uint32 { return globalRand.Uint32() }
 
 // Uint64 returns a pseudo-random 64-bit value as a uint64
 // from the default Source.
-func Uint64() uint64 { return globalRand.Uint64() }
+func Uint64() uint64 { return defaultSource.Uint64() }
 
 // Int31 returns a non-negative pseudo-random 31-bit integer as an int32
 // from the default Source.
