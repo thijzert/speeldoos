@@ -3,27 +3,24 @@ package wavreader
 import (
 	"io"
 	"os"
+	"os/exec"
 )
 
 type Writer struct {
 	target        io.WriteCloser
+	targetProcess *exec.Cmd
 	fixedSize     int
 	initialized   bool
 	observedSize  int
-	FormatType    int
-	Channels      int
-	SampleRate    int
-	BitsPerSample int
+	Format        StreamFormat
+	errorState    error
 }
 
-func NewWriter(target io.WriteCloser, formatType, channels, sampleRate, bitsPerSample int) *Writer {
+func NewWriter(target io.WriteCloser, format StreamFormat) *Writer {
 	rv := &Writer{
-		target:        target,
-		initialized:   false,
-		FormatType:    formatType,
-		Channels:      channels,
-		SampleRate:    sampleRate,
-		BitsPerSample: bitsPerSample,
+		target:      target,
+		initialized: false,
+		Format:      format,
 	}
 
 	return rv
@@ -37,12 +34,12 @@ func (w *Writer) Init(fixedSize int) error {
 	stoa(b[8:12], "WAVE")
 	stoa(b[12:16], "fmt ")
 	itoa(b[16:20], 16)
-	itoa(b[20:22], w.FormatType)
-	itoa(b[22:24], w.Channels)
-	itoa(b[24:28], w.SampleRate)
-	itoa(b[28:32], (w.SampleRate*w.BitsPerSample*w.Channels)/8)
-	itoa(b[32:34], (w.BitsPerSample*w.Channels)/8)
-	itoa(b[34:36], w.BitsPerSample)
+	itoa(b[20:22], w.Format.Format)
+	itoa(b[22:24], w.Format.Channels)
+	itoa(b[24:28], w.Format.Rate)
+	itoa(b[28:32], (w.Format.Channels*w.Format.Rate*w.Format.Bits+7)/8)
+	itoa(b[32:34], (w.Format.Channels*w.Format.Bits+7)/8)
+	itoa(b[34:36], w.Format.Bits)
 	stoa(b[36:40], "data")
 	itoa(b[40:44], fixedSize)
 
@@ -56,12 +53,6 @@ func (w *Writer) Init(fixedSize int) error {
 	return nil
 }
 
-func itoa(a []byte, i int) {
-	for j, _ := range a {
-		a[j] = byte(i & 0xff)
-		i >>= 8
-	}
-}
 func stoa(a []byte, s string) {
 	b := []byte(s)
 	for i, c := range b {
@@ -82,6 +73,9 @@ func writeAll(wr io.Writer, buf []byte) (int, error) {
 }
 
 func (w *Writer) Write(buf []byte) (int, error) {
+	if w.errorState != nil {
+		return 0, w.errorState
+	}
 	if !w.initialized {
 		w.Init(0xffffffd3)
 	}
@@ -92,9 +86,15 @@ func (w *Writer) Write(buf []byte) (int, error) {
 }
 
 func (w *Writer) Close() error {
+	return w.CloseWithError(io.EOF)
+}
+
+func (w *Writer) CloseWithError(er error) error {
 	if !w.initialized {
-		w.Init(0xffffffd3)
+		w.Init(w.observedSize)
 	}
+
+	w.errorState = er
 
 	if f, ok := w.target.(*os.File); ok {
 		_, err := f.Seek(0, 0)
@@ -103,6 +103,25 @@ func (w *Writer) Close() error {
 		}
 	}
 
-	rv := w.target.Close()
+	var rv error
+	if pipe, ok := w.target.(*io.PipeWriter); ok {
+		rv = pipe.CloseWithError(er)
+	} else {
+		rv = w.target.Close()
+	}
+
+	if w.targetProcess != nil {
+		if rv == nil {
+			rv = w.targetProcess.Wait()
+		} else {
+			w.targetProcess.Wait()
+		}
+	}
+
+	if er != nil {
+		return er
+	} else if rv != nil {
+		w.errorState = rv
+	}
 	return rv
 }

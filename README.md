@@ -11,11 +11,12 @@ Different parts of speeldoos will have different dependencies; install them as n
 * FLAC/MetaFLAC
 * LAME
 * ID3v2
+* MPlayer
 
 On my machines I installed most of these using one of the following commands:
 
-* `sudo apt-get install flac lame id3v2`
-* `sudo pacman -S flac lame id3v2`
+* `sudo apt-get install flac lame id3v2 mplayer`
+* `sudo pacman -S flac lame id3v2 mplayer`
 
 However, your mileage may vary.
 
@@ -54,6 +55,13 @@ Multiple patterns may be used, but any work matching any of the patterns will be
 Example
 
     sd grep bruckner
+
+### play
+Start playing from your collection
+
+Usage:
+
+    sd play
 
 ### extract
 Concatenate and transcode each work's parts into large files.

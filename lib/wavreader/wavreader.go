@@ -3,7 +3,6 @@ package wavreader
 import (
 	"fmt"
 	"io"
-	"log"
 )
 
 var (
@@ -12,20 +11,33 @@ var (
 )
 
 type Reader struct {
-	source        io.ReadCloser
-	errorState    error
-	initialized   bool
-	Size          int
-	bytesRead     int
-	FormatType    int
-	Channels      int
-	SampleRate    int
-	BitsPerSample int
+	source      io.ReadCloser
+	errorState  error
+	initialized bool
+	Size        int
+	bytesRead   int
+	Format      StreamFormat
 }
 
 func New(source io.ReadCloser) *Reader {
 	rv := &Reader{source: source, initialized: false}
 	return rv
+}
+
+func Pipe(format StreamFormat) (*Reader, *Writer) {
+	pr, pw := io.Pipe()
+	rv := &Reader{
+		source:      pr,
+		initialized: true,
+		Format:      format,
+	}
+	rw := &Writer{
+		target:      pw,
+		initialized: true,
+		Format:      format,
+	}
+
+	return rv, rw
 }
 
 func (w *Reader) Init() {
@@ -34,7 +46,7 @@ func (w *Reader) Init() {
 	}
 	w.initialized = true
 
-	b := make([]byte, 44)
+	b := make([]byte, 44, 68)
 	_, err := io.ReadFull(w.source, b)
 	if err != nil {
 		w.errorState = err
@@ -42,63 +54,92 @@ func (w *Reader) Init() {
 	}
 
 	if string(b[0:4]) != "RIFF" {
-		log.Printf("Expected: \"RIFF\"; got: \"%s\" (%02x)", b[0:4], b[0:4])
 		w.errorState = parseError
 		return
 	}
 
-	//log.Printf("total file size: %d bytes", atoi(b[4:8])+8)
+	totalLength := atoi(b[4:8])
 
 	if string(b[8:12]) != "WAVE" {
-		log.Printf("Expected: \"WAVE\"; got: \"%s\" (%02x)", b[8:12], b[8:12])
 		w.errorState = parseError
 		return
 	}
 	if string(b[12:15]) != "fmt" {
-		log.Printf("Expected: \"fmt\\0\" or \"fmt \"; got: \"%s\" (%02x)", b[12:16], b[12:16])
 		w.errorState = parseError
 		return
 	}
 
-	//log.Printf("Format header length: %d bytes", atoi(b[16:20]))
-	w.FormatType = atoi(b[20:22])
-	if w.FormatType != 1 {
-		log.Printf("Expected format PCM (1); got unknown format ID %d", w.FormatType)
+	headerLength := atoi(b[16:20])
+	if headerLength < 16 {
 		w.errorState = parseError
 		return
 	}
 
-	w.Channels = atoi(b[22:24])
-	w.SampleRate = atoi(b[24:28])
-	w.BitsPerSample = atoi(b[34:36])
+	dataChunkStart := 36
+	w.Format.Format = atoi(b[20:22])
+	if w.Format.Format == 0xfffe {
+		b = b[:68]
+		_, err := io.ReadFull(w.source, b[44:])
+		if err != nil {
+			w.errorState = err
+			return
+		}
+		extendedData := atoi(b[36:38])
+		if extendedData > 22 {
+			extraExtra := make([]byte, extendedData-22)
+			_, err := io.ReadFull(w.source, extraExtra)
+			if err != nil {
+				w.errorState = err
+				return
+			}
+
+			b = append(b, extraExtra...)
+		}
+
+		dataChunkStart += 2 + extendedData
+
+		// Check the extended format GUID
+		if string(b[44:60]) == "\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71" {
+			// Whew, still PCM
+			w.Format.Format = 1
+		}
+	}
+	if w.Format.Format != 1 {
+		w.errorState = parseError
+		return
+	}
+
+	w.Format.Channels = atoi(b[22:24])
+	w.Format.Rate = atoi(b[24:28])
+	w.Format.Bits = atoi(b[34:36])
 
 	bytesPerSecond := atoi(b[28:32])
-	if bytesPerSecond*8 != (w.BitsPerSample * w.SampleRate * w.Channels) {
-		log.Printf("Invalid number of bytes per second: got %d; expected %d (=%d*%d*%d/8)", bytesPerSecond, (w.BitsPerSample*w.SampleRate*w.Channels)/8, w.BitsPerSample, w.SampleRate, w.Channels)
+	expectedBytesPerSecond := (w.Format.Channels*w.Format.Rate*w.Format.Bits + 7) / 8
+	if bytesPerSecond != expectedBytesPerSecond {
 		w.errorState = parseError
 		return
 	}
 
 	bytesPerSample := atoi(b[32:34])
-	if bytesPerSample*8 != (w.BitsPerSample * w.Channels) {
-		log.Printf("Invalid number of bytes per sample: got %d; expected %d (=%d*%d/8)", bytesPerSample, (w.BitsPerSample*w.Channels)/8, w.BitsPerSample, w.Channels)
+	expectedBytesPerSample := (w.Format.Channels*w.Format.Bits + 7) / 8
+	if bytesPerSample != expectedBytesPerSample {
 		w.errorState = parseError
 		return
 	}
 
-	if string(b[36:40]) != "data" {
-		log.Printf("Expected: \"data\" or \"fmt \"; got: \"%s\" (%02x)", b[36:40], b[36:40])
+	// Data Chunk
+	dc := b[dataChunkStart:]
+
+	if string(dc[0:4]) != "data" {
 		w.errorState = parseError
 		return
 	}
-}
 
-func atoi(buf []byte) int {
-	var rv int = 0
-	for i, b := range buf {
-		rv |= int(b) << uint(i*8)
+	w.Size = atoi(dc[4:8])
+
+	if totalLength != w.Size+headerLength+20 {
+		w.errorState = parseError
 	}
-	return rv
 }
 
 func (w *Reader) Read(b []byte) (int, error) {
@@ -120,6 +161,22 @@ func (w *Reader) Read(b []byte) (int, error) {
 	}
 
 	return n, err
+}
+
+func (r *Reader) WriteTo(w io.Writer) (int64, error) {
+	if wri, ok := w.(*Writer); ok {
+		if wri.Format == r.Format {
+			return io.Copy(wri.target, r)
+		} else {
+			written, err := doConversion(wri, r)
+			if err == io.EOF {
+				err = nil
+			}
+			return written, err
+		}
+	} else {
+		return io.Copy(w, r.source)
+	}
 }
 
 func (w *Reader) Close() error {

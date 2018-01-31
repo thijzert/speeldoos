@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/thijzert/go-rcfile"
 	"github.com/thijzert/speeldoos"
+	"github.com/thijzert/speeldoos/lib/wavreader"
 )
 
 var Config = struct {
@@ -20,7 +20,9 @@ var Config = struct {
 		Flac, Metaflac string
 		Lame           string
 		ID3v2          string
+		MPlayer        string
 	}
+	WAVConf  wavreader.Config
 	Condense struct {
 		Quality   int
 		OutputDir string
@@ -63,6 +65,7 @@ func init() {
 	cmdline.StringVar(&Config.Tools.Metaflac, "tools.metaflac", "", "Path to `metaflac`")
 	cmdline.StringVar(&Config.Tools.Lame, "tools.lame", "", "Path to `lame`")
 	cmdline.StringVar(&Config.Tools.ID3v2, "tools.id3v2", "", "Path to `id3v2`")
+	cmdline.StringVar(&Config.Tools.MPlayer, "tools.mplayer", "", "Path to `mplayer`")
 
 	// }}}
 	// Settings for `sd condense` {{{
@@ -93,6 +96,14 @@ func init() {
 	cmdline.StringVar(&Config.Init.Conductor, "init.conductor", "", "Pre-fill a conductor in each performance")
 
 	cmdline.StringVar(&Config.Init.Discs, "init.discs", "", "A space separated list of the number of tracks in each disc, for a multi-disc release.")
+
+	// }}}
+	// Settings for `sd play` {{{
+
+	// TODO: Remove 44.1kHz default, and autodetect the sound card's native rate
+	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
+	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Rate, "play.rate", 44100, "Playback sample rate.")
+	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Bits, "play.bits", 16, "Playback audio resolution")
 
 	// }}}
 	// Settings pertaining to `sd seedvault` {{{
@@ -158,6 +169,14 @@ func init() {
 	if Config.Tools.ID3v2 == "" {
 		Config.Tools.ID3v2 = "id3v2"
 	}
+	if Config.Tools.MPlayer == "" {
+		Config.Tools.MPlayer = "mplayer"
+	}
+
+	Config.WAVConf.PlaybackFormat.Format = 1
+	Config.WAVConf.FlacPath = Config.Tools.Flac
+	Config.WAVConf.LamePath = Config.Tools.Lame
+	Config.WAVConf.MPlayerPath = Config.Tools.MPlayer
 
 	if Config.ConcurrentJobs < 1 {
 		Config.ConcurrentJobs = 1
@@ -177,6 +196,8 @@ func getSubCmd(name string) SubCommand {
 		return check_main
 	} else if name == "init" {
 		return init_main
+	} else if name == "play" {
+		return play_main
 	} else if name == "seedvault" {
 		return seedvault_main
 	} else {
@@ -202,54 +223,22 @@ func main() {
 	}
 }
 
-type parsedCarrier struct {
-	Filename string
-	Carrier  *speeldoos.Carrier
-	Error    error
+func allCarriers() ([]speeldoos.ParsedCarrier, error) {
+	l := speeldoos.NewLibrary(Config.LibraryDir)
+	er := l.Refresh()
+	if er != nil {
+		return nil, er
+	}
+	return l.AllCarriers(), nil
 }
 
-func allCarriers() ([]parsedCarrier, error) {
-	ppc, err := allCarriersWithErrors()
-	if err != nil {
-		return nil, err
+func allCarriersWithErrors() ([]speeldoos.ParsedCarrier, error) {
+	l := speeldoos.NewLibrary(Config.LibraryDir)
+	er := l.Refresh()
+	if er != nil {
+		return nil, er
 	}
-
-	rv := make([]parsedCarrier, 0, len(ppc))
-	for _, pc := range ppc {
-		if pc.Error == nil {
-			rv = append(rv, pc)
-		}
-	}
-	return rv, nil
-}
-
-func allCarriersWithErrors() ([]parsedCarrier, error) {
-	rv := []parsedCarrier{}
-
-	d, err := os.Open(Config.LibraryDir)
-	if err != nil {
-		return nil, err
-	}
-
-	files, err := d.Readdir(0)
-	if err != nil {
-		return nil, err
-	}
-	for _, f := range files {
-		if f.IsDir() {
-			continue
-		}
-		fn := f.Name()
-		if len(fn) < 5 || fn[len(fn)-4:] != ".xml" {
-			continue
-		}
-
-		pc := parsedCarrier{Filename: path.Join(Config.LibraryDir, fn)}
-		pc.Carrier, pc.Error = speeldoos.ImportCarrier(pc.Filename)
-
-		rv = append(rv, pc)
-	}
-	return rv, nil
+	return l.Carriers, nil
 }
 
 func croak(e error) {
