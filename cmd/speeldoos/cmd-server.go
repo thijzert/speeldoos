@@ -68,6 +68,7 @@ func syncStreamHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			playlist <- playlistItem{Performance: pfii[i], Wav: w}
 		}
+		close(playlist)
 	}()
 
 	w.Header().Set("Content-Type", "audio/mpeg")
