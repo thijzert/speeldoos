@@ -7,18 +7,11 @@ import (
 	"os/exec"
 )
 
-type mp3Writer struct {
-	cmd    *exec.Cmd
-	mp3Out io.Writer
-	input  io.WriteCloser
-	output io.ReadCloser
-}
-
 func ToMP3(mp3Out io.Writer, format StreamFormat) (io.WriteCloser, error) {
 	return defaultConfig.ToMP3(mp3Out, format)
 }
 
-func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (io.WriteCloser, error) {
+func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (*Writer, error) {
 	var err error
 
 	var mode string
@@ -29,8 +22,6 @@ func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (io.WriteCloser, er
 	} else {
 		return nil, fmt.Errorf("unsupported number of channels %d", format.Channels)
 	}
-
-	mw := &mp3Writer{mp3Out: mp3Out}
 
 	lamecmd := []string{
 		"-r", "--quiet", "--replaygain-accurate", "--id3v2-only",
@@ -45,52 +36,25 @@ func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (io.WriteCloser, er
 	}
 	lamecmd = append(lamecmd, "-", "-")
 
-	mw.cmd = exec.Command(c.lame(), lamecmd...)
 
-	mw.cmd.Stderr = os.Stderr
+	mw := &Writer{
+		initialized: true,
+		Format: format,
+	}
+	mw.targetProcess = exec.Command(c.lame(), lamecmd...)
 
-	mw.output, err = mw.cmd.StdoutPipe()
+	mw.targetProcess.Stderr = os.Stderr
+	mw.targetProcess.Stdout = mp3Out
+
+	mw.target, err = mw.targetProcess.StdinPipe()
 	if err != nil {
 		return nil, err
 	}
 
-	mw.input, err = mw.cmd.StdinPipe()
+	err = mw.targetProcess.Start()
 	if err != nil {
 		return nil, err
 	}
-
-	err = mw.cmd.Start()
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		io.Copy(mp3Out, mw.output)
-		mw.cmd.Wait()
-		mw.output.Close()
-		mw.input.Close()
-	}()
 
 	return mw, nil
-}
-
-func (mw *mp3Writer) Write(buf []byte) (int, error) {
-	if mw.cmd.ProcessState != nil && mw.cmd.ProcessState.Exited() && !mw.cmd.ProcessState.Success() {
-		return 0, fmt.Errorf("error writing MP3 file")
-	}
-	n, err := writeAll(mw.input, buf)
-	return n, err
-}
-
-func (mw *mp3Writer) Close() error {
-	mw.input.Close()
-	err := mw.cmd.Wait()
-	if err != nil {
-		return err
-	}
-	if mw.cmd.ProcessState != nil && mw.cmd.ProcessState.Exited() && !mw.cmd.ProcessState.Success() {
-		return fmt.Errorf("error writing MP3 file")
-	}
-
-	return nil
 }
