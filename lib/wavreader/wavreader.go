@@ -10,26 +10,35 @@ var (
 	parseError         error = fmt.Errorf("parse error")
 )
 
-type Reader struct {
+type Reader interface {
+	io.ReadCloser
+	Formater
+
+	Init()
+	Size() int
+	SetSize(int)
+}
+
+type wavReader struct {
 	source      io.ReadCloser
 	errorState  error
 	initialized bool
-	Size        int
+	size        int
 	bytesRead   int
-	Format      StreamFormat
+	format      StreamFormat
 }
 
-func New(source io.ReadCloser) *Reader {
-	rv := &Reader{source: source, initialized: false}
+func New(source io.ReadCloser) Reader {
+	rv := &wavReader{source: source, initialized: false}
 	return rv
 }
 
-func Pipe(format StreamFormat) (*Reader, *Writer) {
+func Pipe(format StreamFormat) (Reader, *Writer) {
 	pr, pw := io.Pipe()
-	rv := &Reader{
+	rv := &wavReader{
 		source:      pr,
 		initialized: true,
-		Format:      format,
+		format:      format,
 	}
 	rw := &Writer{
 		target:      pw,
@@ -40,7 +49,18 @@ func Pipe(format StreamFormat) (*Reader, *Writer) {
 	return rv, rw
 }
 
-func (w *Reader) Init() {
+func (w *wavReader) Format() StreamFormat {
+	return w.format
+}
+
+func (w *wavReader) Size() int {
+	return w.size
+}
+func (w *wavReader) SetSize(s int) {
+	w.size = s
+}
+
+func (w *wavReader) Init() {
 	if w.initialized {
 		return
 	}
@@ -76,8 +96,8 @@ func (w *Reader) Init() {
 	}
 
 	dataChunkStart := 36
-	w.Format.Format = atoi(b[20:22])
-	if w.Format.Format == 0xfffe {
+	w.format.Format = atoi(b[20:22])
+	if w.format.Format == 0xfffe {
 		b = b[:68]
 		_, err := io.ReadFull(w.source, b[44:])
 		if err != nil {
@@ -101,27 +121,27 @@ func (w *Reader) Init() {
 		// Check the extended format GUID
 		if string(b[44:60]) == "\x01\x00\x00\x00\x00\x00\x10\x00\x80\x00\x00\xaa\x00\x38\x9b\x71" {
 			// Whew, still PCM
-			w.Format.Format = 1
+			w.format.Format = 1
 		}
 	}
-	if w.Format.Format != 1 {
+	if w.format.Format != 1 {
 		w.errorState = parseError
 		return
 	}
 
-	w.Format.Channels = atoi(b[22:24])
-	w.Format.Rate = atoi(b[24:28])
-	w.Format.Bits = atoi(b[34:36])
+	w.format.Channels = atoi(b[22:24])
+	w.format.Rate = atoi(b[24:28])
+	w.format.Bits = atoi(b[34:36])
 
 	bytesPerSecond := atoi(b[28:32])
-	expectedBytesPerSecond := (w.Format.Channels*w.Format.Rate*w.Format.Bits + 7) / 8
+	expectedBytesPerSecond := (w.format.Channels*w.format.Rate*w.format.Bits + 7) / 8
 	if bytesPerSecond != expectedBytesPerSecond {
 		w.errorState = parseError
 		return
 	}
 
 	bytesPerSample := atoi(b[32:34])
-	expectedBytesPerSample := (w.Format.Channels*w.Format.Bits + 7) / 8
+	expectedBytesPerSample := (w.format.Channels*w.format.Bits + 7) / 8
 	if bytesPerSample != expectedBytesPerSample {
 		w.errorState = parseError
 		return
@@ -135,14 +155,14 @@ func (w *Reader) Init() {
 		return
 	}
 
-	w.Size = atoi(dc[4:8])
+	w.size = atoi(dc[4:8])
 
-	if totalLength != w.Size+headerLength+20 {
+	if totalLength != w.size+headerLength+20 {
 		w.errorState = parseError
 	}
 }
 
-func (w *Reader) Read(b []byte) (int, error) {
+func (w *wavReader) Read(b []byte) (int, error) {
 	if w.errorState != nil {
 		return 0, w.errorState
 	}
@@ -150,8 +170,8 @@ func (w *Reader) Read(b []byte) (int, error) {
 		return 0, uninitializedError
 	}
 
-	//if len(b) > (w.Size-w.bytesRead) {
-	//	b = b[:w.Size-w.bytesRead]
+	//if len(b) > (w.size-w.bytesRead) {
+	//	b = b[:w.size-w.bytesRead]
 	//}
 	n, err := w.source.Read(b)
 
@@ -163,9 +183,9 @@ func (w *Reader) Read(b []byte) (int, error) {
 	return n, err
 }
 
-func (r *Reader) WriteTo(w io.Writer) (int64, error) {
+func (r *wavReader) WriteTo(w io.Writer) (int64, error) {
 	if wri, ok := w.(*Writer); ok {
-		if wri.Format == r.Format {
+		if wri.Format == r.format {
 			return io.Copy(wri.target, r)
 		} else {
 			written, err := doConversion(wri, r)
@@ -179,7 +199,7 @@ func (r *Reader) WriteTo(w io.Writer) (int64, error) {
 	}
 }
 
-func (w *Reader) Close() error {
+func (w *wavReader) Close() error {
 	if w.errorState != nil {
 		return w.errorState
 	}

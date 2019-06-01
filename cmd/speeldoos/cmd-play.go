@@ -11,7 +11,7 @@ import (
 
 type playlistItem struct {
 	Performance speeldoos.Performance
-	Wav         *wavreader.Reader
+	Wav         wavreader.Reader
 }
 
 func play_main(args []string) {

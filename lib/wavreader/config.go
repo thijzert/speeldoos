@@ -7,6 +7,10 @@ type StreamFormat struct {
 	Bits     int
 }
 
+type Formater interface {
+	Format() StreamFormat
+}
+
 type Config struct {
 	// Path to `lame` binary
 	LamePath string

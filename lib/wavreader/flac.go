@@ -84,11 +84,11 @@ func (fr *flacReader) Close() error {
 	return fr.cmd.Wait()
 }
 
-func FromFLAC(in io.ReadCloser) (*Reader, error) {
+func FromFLAC(in io.ReadCloser) (Reader, error) {
 	return defaultConfig.FromFLAC(in)
 }
 
-func (c Config) FromFLAC(in io.ReadCloser) (*Reader, error) {
+func (c Config) FromFLAC(in io.ReadCloser) (Reader, error) {
 	wavout, err := c.newFlacReader(in)
 	if err != nil {
 		return nil, err
