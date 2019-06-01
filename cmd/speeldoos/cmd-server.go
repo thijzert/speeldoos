@@ -83,16 +83,17 @@ func syncStreamHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer output.Close()
 
 	for item := range playlist {
 		log.Printf("Now playing: %s - %s", item.Performance.Work.Composer.Name, item.Performance.Work.Title[0].Title)
+		defer item.Wav.Close()
+
 		_, err = io.Copy(output, item.Wav)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			return
 		}
-		item.Wav.Close()
 	}
-
-	output.Close()
 }
