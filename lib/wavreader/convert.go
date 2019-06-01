@@ -28,28 +28,28 @@ func Convert(r Reader, format StreamFormat) (Reader, error) {
 	return rv, nil
 }
 
-func doConversion(wri *Writer, r Reader) (int64, error) {
+func doConversion(wri Writer, r Reader) (int64, error) {
 	var written int64
 
 	// Samples at a time. We're reading the input stream in chunks of, say, 10ms.
-	saatIn, saatOut := (msCHUNK*r.Format().Rate+999)/1000, 1+(msCHUNK*wri.Format.Rate+999)/1000
+	saatIn, saatOut := (msCHUNK*r.Format().Rate+999)/1000, 1+(msCHUNK*wri.Format().Rate+999)/1000
 
 	// Bytes per sample
-	Bin, Bout := (r.Format().Bits+7)/8, (wri.Format.Bits+7)/8
+	Bin, Bout := (r.Format().Bits+7)/8, (wri.Format().Bits+7)/8
 
 	// Create buffers
 	bufIn := make([]byte, r.Format().Channels*saatIn*Bin)
-	bufChan := make([][]byte, wri.Format.Channels)
-	bufRate := make([]*rateConverter, wri.Format.Channels)
-	bufBits := make([][]byte, wri.Format.Channels)
-	bufOut := make([]byte, wri.Format.Channels*saatOut*Bout)
+	bufChan := make([][]byte, wri.Format().Channels)
+	bufRate := make([]*rateConverter, wri.Format().Channels)
+	bufBits := make([][]byte, wri.Format().Channels)
+	bufOut := make([]byte, wri.Format().Channels*saatOut*Bout)
 
 	for i, _ := range bufChan {
 		bufChan[i] = make([]byte, saatIn*Bin)
 
-		bufRate[i] = newRateConverter(r, wri.Format.Rate, bufChan[i])
+		bufRate[i] = newRateConverter(r, wri.Format().Rate, bufChan[i])
 
-		if r.Format().Bits == wri.Format.Bits {
+		if r.Format().Bits == wri.Format().Bits {
 			// Optimization: since we're not converting, just reuse the last output buffer
 			bufBits[i] = bufRate[i].Output
 		} else {
@@ -78,7 +78,7 @@ func doConversion(wri *Writer, r Reader) (int64, error) {
 		}
 
 		for i, ch := range bufRate {
-			nBits, err = convertBits(bufBits[i], ch.Output[:nRate], r, Bin, Bout, wri.Format.Bits)
+			nBits, err = convertBits(bufBits[i], ch.Output[:nRate], r, Bin, Bout, wri.Format().Bits)
 			if err != nil {
 				wri.CloseWithError(err)
 				return written, err

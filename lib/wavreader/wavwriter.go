@@ -6,27 +6,35 @@ import (
 	"os/exec"
 )
 
-type Writer struct {
+type Writer interface {
+	io.WriteCloser
+	Formater
+
+	Init(int) error
+	CloseWithError(error) error
+}
+
+type wavWriter struct {
 	target        io.WriteCloser
 	targetProcess *exec.Cmd
 	fixedSize     int
 	initialized   bool
 	observedSize  int
-	Format        StreamFormat
+	format        StreamFormat
 	errorState    error
 }
 
-func NewWriter(target io.WriteCloser, format StreamFormat) *Writer {
-	rv := &Writer{
+func NewWriter(target io.WriteCloser, format StreamFormat) Writer {
+	rv := &wavWriter{
 		target:      target,
 		initialized: false,
-		Format:      format,
+		format:      format,
 	}
 
 	return rv
 }
 
-func (w *Writer) Init(fixedSize int) error {
+func (w *wavWriter) Init(fixedSize int) error {
 	b := make([]byte, 44)
 
 	stoa(b[0:4], "RIFF")
@@ -34,12 +42,12 @@ func (w *Writer) Init(fixedSize int) error {
 	stoa(b[8:12], "WAVE")
 	stoa(b[12:16], "fmt ")
 	itoa(b[16:20], 16)
-	itoa(b[20:22], w.Format.Format)
-	itoa(b[22:24], w.Format.Channels)
-	itoa(b[24:28], w.Format.Rate)
-	itoa(b[28:32], (w.Format.Channels*w.Format.Rate*w.Format.Bits+7)/8)
-	itoa(b[32:34], (w.Format.Channels*w.Format.Bits+7)/8)
-	itoa(b[34:36], w.Format.Bits)
+	itoa(b[20:22], w.Format().Format)
+	itoa(b[22:24], w.Format().Channels)
+	itoa(b[24:28], w.Format().Rate)
+	itoa(b[28:32], (w.Format().Channels*w.Format().Rate*w.Format().Bits+7)/8)
+	itoa(b[32:34], (w.Format().Channels*w.Format().Bits+7)/8)
+	itoa(b[34:36], w.Format().Bits)
 	stoa(b[36:40], "data")
 	itoa(b[40:44], fixedSize)
 
@@ -51,6 +59,17 @@ func (w *Writer) Init(fixedSize int) error {
 	w.initialized = true
 
 	return nil
+}
+
+func (w *wavWriter) Format() StreamFormat {
+	return w.format
+}
+
+func (w *wavWriter) Size() int {
+	return w.fixedSize
+}
+func (w *wavWriter) SetSize(s int) {
+	w.fixedSize = s
 }
 
 func stoa(a []byte, s string) {
@@ -72,7 +91,7 @@ func writeAll(wr io.Writer, buf []byte) (int, error) {
 	return n, nil
 }
 
-func (w *Writer) Write(buf []byte) (int, error) {
+func (w *wavWriter) Write(buf []byte) (int, error) {
 	if w.errorState != nil {
 		return 0, w.errorState
 	}
@@ -85,11 +104,11 @@ func (w *Writer) Write(buf []byte) (int, error) {
 	return n, err
 }
 
-func (w *Writer) Close() error {
+func (w *wavWriter) Close() error {
 	return w.CloseWithError(io.EOF)
 }
 
-func (w *Writer) CloseWithError(er error) error {
+func (w *wavWriter) CloseWithError(er error) error {
 	if !w.initialized {
 		w.Init(w.observedSize)
 	}

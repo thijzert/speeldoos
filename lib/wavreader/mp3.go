@@ -11,7 +11,7 @@ func ToMP3(mp3Out io.Writer, format StreamFormat) (io.WriteCloser, error) {
 	return defaultConfig.ToMP3(mp3Out, format)
 }
 
-func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (*Writer, error) {
+func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (Writer, error) {
 	var err error
 
 	var mode string
@@ -36,10 +36,9 @@ func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (*Writer, error) {
 	}
 	lamecmd = append(lamecmd, "-", "-")
 
-
-	mw := &Writer{
+	mw := &wavWriter{
 		initialized: true,
-		Format: format,
+		format:      format,
 	}
 	mw.targetProcess = exec.Command(c.lame(), lamecmd...)
 

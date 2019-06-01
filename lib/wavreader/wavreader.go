@@ -33,17 +33,17 @@ func New(source io.ReadCloser) Reader {
 	return rv
 }
 
-func Pipe(format StreamFormat) (Reader, *Writer) {
+func Pipe(format StreamFormat) (Reader, Writer) {
 	pr, pw := io.Pipe()
 	rv := &wavReader{
 		source:      pr,
 		initialized: true,
 		format:      format,
 	}
-	rw := &Writer{
+	rw := &wavWriter{
 		target:      pw,
 		initialized: true,
-		Format:      format,
+		format:      format,
 	}
 
 	return rv, rw
@@ -184,9 +184,9 @@ func (w *wavReader) Read(b []byte) (int, error) {
 }
 
 func (r *wavReader) WriteTo(w io.Writer) (int64, error) {
-	if wri, ok := w.(*Writer); ok {
-		if wri.Format == r.format {
-			return io.Copy(wri.target, r)
+	if wri, ok := w.(Writer); ok {
+		if wri.Format() == r.format {
+			return io.Copy(wri, r.source)
 		} else {
 			written, err := doConversion(wri, r)
 			if err == io.EOF {
