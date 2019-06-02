@@ -73,13 +73,7 @@ func syncStreamHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "audio/mpeg")
 
-	format := wavreader.StreamFormat{
-		Format:   1,
-		Channels: 2,
-		Rate:     48000,
-		Bits:     16,
-	}
-	output, err := Config.WAVConf.ToMP3(w, format)
+	output, err := Config.WAVConf.ToMP3(w, wavreader.DAT)
 	if err != nil {
 		log.Fatal(err)
 	}

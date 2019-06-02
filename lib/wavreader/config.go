@@ -7,6 +7,27 @@ type StreamFormat struct {
 	Bits     int
 }
 
+var (
+	CD StreamFormat = StreamFormat{
+		Format:   1,
+		Channels: 2,
+		Rate:     44100,
+		Bits:     16,
+	}
+	DAT StreamFormat = StreamFormat{
+		Format:   1,
+		Channels: 2,
+		Rate:     48000,
+		Bits:     16,
+	}
+	DOG StreamFormat = StreamFormat{
+		Format:   1,
+		Channels: 2,
+		Rate:     192000,
+		Bits:     24,
+	}
+)
+
 type Formater interface {
 	Format() StreamFormat
 }
