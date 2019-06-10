@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func ToMP3(mp3Out io.Writer, format StreamFormat) (io.WriteCloser, error) {
+func ToMP3(mp3Out io.Writer, format StreamFormat) (Writer, error) {
 	return defaultConfig.ToMP3(mp3Out, format)
 }
 
