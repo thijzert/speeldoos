@@ -25,14 +25,17 @@ type chunk struct {
 	embargo  time.Time
 }
 
-type mp3Chunker struct {
-	audioIn wavreader.Writer
-	mp3out  *io.PipeReader
-
+type chunkContainer struct {
 	mu         sync.RWMutex
 	errorState error
 	chunks     []chunk
 	start, end int
+}
+
+type mp3Chunker struct {
+	audioIn wavreader.Writer
+	mp3out  *io.PipeReader
+	chcont *chunkContainer
 }
 
 func NewMP3() (Chunker, error) {
@@ -46,9 +49,11 @@ func NewMP3() (Chunker, error) {
 	rv := &mp3Chunker{
 		audioIn: wavin,
 		mp3out:  r,
-		chunks:  make([]chunk, 30),
-		start:   0,
-		end:     0,
+		chcont: &chunkContainer{
+			chunks:  make([]chunk, 30),
+			start:   0,
+			end:     0,
+		},
 	}
 
 	go rv.splitChunks()
@@ -57,8 +62,8 @@ func NewMP3() (Chunker, error) {
 }
 
 func (m *mp3Chunker) Init(fixedSize int) error {
-	if m.errorState != nil {
-		return m.errorState
+	if m.chcont.errorState != nil {
+		return m.chcont.errorState
 	}
 	return m.audioIn.Init(fixedSize)
 }
@@ -66,23 +71,23 @@ func (m *mp3Chunker) Format() wavreader.StreamFormat {
 	return m.audioIn.Format()
 }
 func (m *mp3Chunker) Write(buf []byte) (int, error) {
-	if m.errorState != nil {
-		return 0, m.errorState
+	if m.chcont.errorState != nil {
+		return 0, m.chcont.errorState
 	}
 	return m.audioIn.Write(buf)
 }
 func (m *mp3Chunker) Close() error {
-	if m.errorState != nil {
-		return m.errorState
+	if m.chcont.errorState != nil {
+		return m.chcont.errorState
 	}
-	m.errorState = io.EOF
+	m.chcont.errorState = io.EOF
 	return m.audioIn.Close()
 }
 func (m *mp3Chunker) CloseWithError(er error) error {
-	if m.errorState != nil {
-		return m.errorState
+	if m.chcont.errorState != nil {
+		return m.chcont.errorState
 	}
-	m.errorState = er
+	m.chcont.errorState = er
 	return m.audioIn.CloseWithError(er)
 }
 
@@ -102,17 +107,7 @@ func (m *mp3Chunker) splitChunks() {
 			continue
 		}
 
-		chbuf := make([]byte, n)
-		copy(chbuf, buf[:n])
-
-		m.mu.Lock()
-		l := len(m.chunks)
-		next := m.end
-		m.end = (m.end + 1 + 2*l) % l
-		m.start = (m.end + 5 + 2*l) % l
-		m.chunks[next].embargo = embargo
-		m.chunks[next].contents = chbuf
-		m.mu.Unlock()
+		m.chcont.AddChunk(buf[:n], embargo)
 
 		embargo = embargo.Add(20 * time.Millisecond)
 		for time.Now().Add(100 * time.Millisecond).Before(embargo) {
@@ -123,30 +118,48 @@ func (m *mp3Chunker) splitChunks() {
 }
 
 func (m *mp3Chunker) NewStream() (ChunkStream, error) {
-	if m.errorState != nil {
-		return nil, m.errorState
+	return m.chcont.NewStream()
+}
+
+func (chcont *chunkContainer) NewStream() (ChunkStream, error) {
+	if chcont.errorState != nil {
+		return nil, chcont.errorState
 	}
 
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	chcont.mu.RLock()
+	defer chcont.mu.RUnlock()
 
 	now := time.Now()
-	start := m.start
-	for start != m.end {
-		if m.chunks[start].embargo.Before(now) {
+	start := chcont.start
+	for start != chcont.end {
+		if chcont.chunks[start].embargo.Before(now) {
 			break
 		}
-		start = (start + 1) % len(m.chunks)
+		start = (start + 1) % len(chcont.chunks)
 	}
 
 	return &chunkReader{
-		parent:  m,
+		parent:  chcont,
 		current: start,
 	}, nil
 }
 
+func (chcont *chunkContainer) AddChunk(buf []byte, embargo time.Time) {
+	chbuf := make([]byte, len(buf))
+	copy(chbuf, buf)
+
+	chcont.mu.Lock()
+	l := len(chcont.chunks)
+	next := chcont.end
+	chcont.end = (chcont.end + 1 + 2*l) % l
+	chcont.start = (chcont.end + 5 + 2*l) % l
+	chcont.chunks[next].embargo = embargo
+	chcont.chunks[next].contents = chbuf
+	chcont.mu.Unlock()
+}
+
 type chunkReader struct {
-	parent   *mp3Chunker
+	parent   *chunkContainer
 	current  int
 	embargo  time.Time
 	buf      []byte
