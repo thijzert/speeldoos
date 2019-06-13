@@ -1,6 +1,7 @@
 package chunker
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"sync"
@@ -23,6 +24,7 @@ type ChunkStream interface {
 type chunk struct {
 	contents []byte
 	embargo  time.Time
+	seqno    uint32
 }
 
 type chunkContainer struct {
@@ -30,12 +32,13 @@ type chunkContainer struct {
 	errorState error
 	chunks     []chunk
 	start, end int
+	seqno      uint32
 }
 
 type mp3Chunker struct {
 	audioIn wavreader.Writer
 	mp3out  *io.PipeReader
-	chcont *chunkContainer
+	chcont  *chunkContainer
 }
 
 func NewMP3() (Chunker, error) {
@@ -50,9 +53,9 @@ func NewMP3() (Chunker, error) {
 		audioIn: wavin,
 		mp3out:  r,
 		chcont: &chunkContainer{
-			chunks:  make([]chunk, 30),
-			start:   0,
-			end:     0,
+			chunks: make([]chunk, 30),
+			start:  0,
+			end:    0,
 		},
 	}
 
@@ -141,6 +144,7 @@ func (chcont *chunkContainer) NewStream() (ChunkStream, error) {
 	return &chunkReader{
 		parent:  chcont,
 		current: start,
+		seqno:   chcont.chunks[start].seqno,
 	}, nil
 }
 
@@ -155,6 +159,8 @@ func (chcont *chunkContainer) AddChunk(buf []byte, embargo time.Time) {
 	chcont.start = (chcont.end + 5 + 2*l) % l
 	chcont.chunks[next].embargo = embargo
 	chcont.chunks[next].contents = chbuf
+	chcont.chunks[next].seqno = chcont.seqno
+	chcont.seqno++
 	chcont.mu.Unlock()
 }
 
@@ -164,6 +170,7 @@ type chunkReader struct {
 	embargo  time.Time
 	buf      []byte
 	bufindex int
+	seqno    uint32
 }
 
 func (ch *chunkReader) readBuffer(b []byte) (n int) {
@@ -191,7 +198,7 @@ func (ch *chunkReader) readBuffer(b []byte) (n int) {
 	return n
 }
 
-func (ch *chunkReader) getNext() bool {
+func (ch *chunkReader) getNext() (bool, error) {
 	ch.parent.mu.RLock()
 	defer ch.parent.mu.RUnlock()
 
@@ -201,21 +208,25 @@ func (ch *chunkReader) getNext() bool {
 	}
 	if ch.parent.start <= ch.parent.end {
 		if next < ch.parent.start || next >= ch.parent.end {
-			return false
+			return false, nil
 		}
 	} else {
 		if next < ch.parent.start && next >= ch.parent.end {
-			return false
+			return false, nil
 		}
 	}
 	ch.current = next
 
 	cch := ch.parent.chunks[ch.current]
+	ch.seqno++
+	if ch.seqno != cch.seqno {
+		return false, fmt.Errorf("sequence number mismatch")
+	}
 	ch.embargo = cch.embargo
 	ch.buf = make([]byte, len(cch.contents))
 	copy(ch.buf, cch.contents)
 	ch.bufindex = 0
-	return true
+	return true, nil
 }
 
 func (ch *chunkReader) Read(b []byte) (n int, err error) {
@@ -224,7 +235,13 @@ func (ch *chunkReader) Read(b []byte) (n int, err error) {
 		return
 	}
 
-	if !ch.getNext() {
+	var changed bool
+	changed, err = ch.getNext()
+	if err != nil {
+		return
+	}
+
+	if !changed {
 		if ch.parent.errorState != nil {
 			return 0, ch.parent.errorState
 		}
