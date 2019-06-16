@@ -38,7 +38,7 @@ func TestReadAll(t *testing.T) {
 	chm := &chunkReader{
 		parent:  m,
 		current: -1,
-		seqno: 0xffffffff,
+		seqno:   0xffffffff,
 	}
 
 	s, err := ioutil.ReadAll(chm)

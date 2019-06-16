@@ -101,7 +101,7 @@ func TestMP3Splitting(t *testing.T) {
 	rv.splitChunks()
 
 	dur := rv.embargo.Sub(tstart)
-	if dur < (2*time.Minute + 9*time.Second) || dur > (2*time.Minute + 11*time.Second) {
+	if dur < (2*time.Minute+9*time.Second) || dur > (2*time.Minute+11*time.Second) {
 		t.Errorf("Observed song duration: %s; should be: 2m10s", dur)
 	}
 }
