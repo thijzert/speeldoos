@@ -38,6 +38,7 @@ type chunkContainer struct {
 type mp3Chunker struct {
 	audioIn wavreader.Writer
 	mp3out  *io.PipeReader
+	embargo  time.Time
 	chcont  *chunkContainer
 }
 
@@ -52,6 +53,7 @@ func NewMP3() (Chunker, error) {
 	rv := &mp3Chunker{
 		audioIn: wavin,
 		mp3out:  r,
+		embargo: time.Now(),
 		chcont: &chunkContainer{
 			chunks: make([]chunk, 30),
 			start:  0,
@@ -91,18 +93,24 @@ func (m *mp3Chunker) CloseWithError(er error) error {
 		return m.chcont.errorState
 	}
 	m.chcont.errorState = er
-	return m.audioIn.CloseWithError(er)
+	if m.audioIn != nil {
+		return m.audioIn.CloseWithError(er)
+	} else {
+		return er
+	}
 }
 
 func (m *mp3Chunker) splitChunks() {
 	buf := make([]byte, 1600)
-	embargo := time.Now()
 	var err error
 	var n int
 	for {
 		n, err = m.mp3out.Read(buf)
 		if err != nil {
-			log.Printf("splitting hairs got me this error: %s", err)
+			if err != io.EOF {
+				// TODO: remove
+				log.Printf("splitting hairs got me this error: %s", err)
+			}
 			break
 		}
 
@@ -110,10 +118,10 @@ func (m *mp3Chunker) splitChunks() {
 			continue
 		}
 
-		m.chcont.AddChunk(buf[:n], embargo)
+		m.chcont.AddChunk(buf[:n], m.embargo)
 
-		embargo = embargo.Add(20 * time.Millisecond)
-		for time.Now().Add(100 * time.Millisecond).Before(embargo) {
+		m.embargo = m.embargo.Add(20 * time.Millisecond)
+		for time.Now().Add(100 * time.Millisecond).Before(m.embargo) {
 			time.Sleep(1 * time.Millisecond)
 		}
 	}

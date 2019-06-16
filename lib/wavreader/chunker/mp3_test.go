@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
 )
 
 type toms struct {
@@ -69,5 +70,38 @@ func TestTomsDiner(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 		return
+	}
+}
+
+func TestMP3Splitting(t *testing.T) {
+	td, err := tomsDiner()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	pr, pw := io.Pipe()
+	go func() {
+		io.Copy(pw, td)
+		pw.Close()
+	}()
+
+	tstart := time.Now().Add(-720 * 24 * time.Hour)
+
+	rv := &mp3Chunker{
+		mp3out:  pr,
+		embargo: tstart,
+		chcont: &chunkContainer{
+			chunks: make([]chunk, 30),
+			start:  0,
+			end:    0,
+		},
+	}
+
+	rv.splitChunks()
+
+	dur := rv.embargo.Sub(tstart)
+	if dur < (2*time.Minute + 9*time.Second) || dur > (2*time.Minute + 11*time.Second) {
+		t.Errorf("Observed song duration: %s; should be: 2m10s", dur)
 	}
 }
