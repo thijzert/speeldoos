@@ -23,7 +23,7 @@ func TestReadAll(t *testing.T) {
 
 	emb := time.Now().Add(-10 * time.Millisecond)
 
-	m := &mp3Chunker{
+	m := &chunkContainer{
 		chunks:     make([]chunk, n+2),
 		start:      0,
 		end:        n,
@@ -32,11 +32,13 @@ func TestReadAll(t *testing.T) {
 	for i := 0; i < n; i++ {
 		m.chunks[i].contents = buf[l*i : l*(i+1)]
 		m.chunks[i].embargo = emb
+		m.chunks[i].seqno = uint32(i)
 	}
 
 	chm := &chunkReader{
 		parent:  m,
-		current: n + 1,
+		current: -1,
+		seqno: 0xffffffff,
 	}
 
 	s, err := ioutil.ReadAll(chm)
