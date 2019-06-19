@@ -20,7 +20,7 @@ func tomsDiner() (io.ReadCloser, error) {
 	key, err := ioutil.ReadFile("testdata/license.txt")
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("No license could be found. To continue, please reach out to Suzanne Vega and ask for her permission to use a rendition of \"Tom's Diner\" to run \"go test.\"")
+			return nil, fmt.Errorf("No license could be found. To continue, please reach out to Suzanne Vega and ask for her written permission to use a rendition of \"Tom's Diner\" to run \"go test.\"")
 		} else {
 			return nil, err
 		}
