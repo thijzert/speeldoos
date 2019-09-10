@@ -29,7 +29,7 @@ func NewMP3() (Chunker, error) {
 		mp3out:  r,
 		embargo: time.Now(),
 		chcont: &chunkContainer{
-			chunks: make([]chunk, 30),
+			chunks: make([]chunk, 500),
 			start:  0,
 			end:    0,
 		},

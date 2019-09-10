@@ -65,8 +65,10 @@ func (chcont *chunkContainer) AddChunk(buf []byte, embargo time.Time) {
 	chcont.mu.Lock()
 	l := len(chcont.chunks)
 	next := chcont.end
-	chcont.end = (chcont.end + 1 + 2*l) % l
-	chcont.start = (chcont.end + 5 + 2*l) % l
+	chcont.end = (next + 1 + 2*l) % l
+	if next < chcont.start || next + 5 > l {
+		chcont.start = (next + 5 + 2*l) % l
+	}
 	chcont.chunks[next].embargo = embargo
 	chcont.chunks[next].contents = chbuf
 	chcont.chunks[next].seqno = chcont.seqno
