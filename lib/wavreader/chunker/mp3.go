@@ -108,7 +108,8 @@ func (m *mp3Chunker) splitChunks() {
 		i, nexthdr = nextHeader(unread[firstOffset:], hdr)
 		for i >= 0 {
 			hdr = nexthdr
-			m.chcont.AddChunk(buf[:n], m.embargo)
+			chunk := unread[:firstOffset+i]
+			m.chcont.AddChunk(chunk, m.embargo)
 
 			m.embargo = m.embargo.Add(hdr.Duration())
 			for time.Now().Add(100 * time.Millisecond).Before(m.embargo) {
