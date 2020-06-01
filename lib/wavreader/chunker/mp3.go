@@ -9,6 +9,8 @@ import (
 	"github.com/thijzert/speeldoos/lib/wavreader"
 )
 
+const mp3ReadAhead time.Duration = 30 * time.Second
+
 type mp3Chunker struct {
 	audioIn wavreader.Writer
 	mp3out  *io.PipeReader
@@ -29,7 +31,7 @@ func NewMP3() (Chunker, error) {
 		mp3out:  r,
 		embargo: time.Now(),
 		chcont: &chunkContainer{
-			chunks: make([]chunk, 500),
+			chunks: make([]chunk, 4000),
 			start:  0,
 			end:    0,
 		},
@@ -112,7 +114,7 @@ func (m *mp3Chunker) splitChunks() {
 			m.chcont.AddChunk(chunk, m.embargo)
 
 			m.embargo = m.embargo.Add(hdr.Duration())
-			for time.Now().Add(100 * time.Millisecond).Before(m.embargo) {
+			for time.Now().Add(mp3ReadAhead).Before(m.embargo) {
 				time.Sleep(1 * time.Millisecond)
 			}
 

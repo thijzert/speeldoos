@@ -96,7 +96,7 @@ func (w *wavWriter) Write(buf []byte) (int, error) {
 		return 0, w.errorState
 	}
 	if !w.initialized {
-		w.Init(0xffffffd3)
+		w.Init(0x7fffffd3)
 	}
 	n, err := writeAll(w.target, buf)
 	w.observedSize += n
