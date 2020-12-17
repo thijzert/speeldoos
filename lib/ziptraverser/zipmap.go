@@ -26,16 +26,69 @@ package ziptraverser
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type zipMap struct {
-	zips map[string]*zip.ReadCloser
+	zipLRU  []mapElement
+	maxSize int
+}
+
+type mapElement struct {
+	Filename string
+	Zip      *zip.ReadCloser
+}
+
+func newMap(size int) *zipMap {
+	rv := &zipMap{
+		// A list of open files. The most recently used zip reader is at index 0
+		// of this list; the last one is at the end.
+		zipLRU: make([]mapElement, 0, size),
+		// The maximum size zipLRU can be. If len(zipLRU) is equal to maxSize and
+		// a new file is opened, the zip reader at index 0 is closed
+		maxSize: size,
+	}
+
+	return rv
+}
+
+func (z *zipMap) getZipHandle(zipfile string) (*zip.ReadCloser, error) {
+	var read mapElement
+	var i int
+	ok := false
+	for i, read = range z.zipLRU {
+		if read.Filename == zipfile {
+			ok = true
+			break
+		}
+	}
+
+	if ok {
+		z.zipLRU = append(z.zipLRU[:i], z.zipLRU[i+1:]...)
+	} else {
+		if len(z.zipLRU) == z.maxSize {
+			// We're at the maximum number of open files - close the least recently used one
+			z.zipLRU[0].Zip.Close()
+			copy(z.zipLRU, z.zipLRU[1:])
+			z.zipLRU = z.zipLRU[:z.maxSize-1]
+		}
+
+		f, err := zip.OpenReader(zipfile)
+		if err != nil {
+			return nil, err
+		}
+		read = mapElement{zipfile, f}
+	}
+
+	z.zipLRU = append(z.zipLRU, read)
+
+	return read.Zip, nil
 }
 
 func (z *zipMap) Exists(filename string) bool {
@@ -73,15 +126,9 @@ func (z *zipMap) Get(filename string) (io.ReadCloser, error) {
 			continue
 		}
 		zipfile := abs + filepath.Join(elems[0:i+1]...)
-		read, ok := z.zips[zipfile]
-		if !ok {
-			// log.Printf("Opening zip file %s...\n", zipfile)
-			read, err = zip.OpenReader(zipfile)
-			if err != nil {
-				log.Print(err)
-				read = nil
-			}
-			z.zips[zipfile] = read
+		read, err := z.getZipHandle(zipfile)
+		if err != nil {
+			log.Print(err)
 		}
 
 		if read == nil {
@@ -96,10 +143,10 @@ func (z *zipMap) Get(filename string) (io.ReadCloser, error) {
 			}
 		}
 
-		return rv, fmt.Errorf("File '%s' does not exist in '%s'", localfile, zipfile) // os.ErrNotExist
+		return rv, errors.Wrapf(os.ErrNotExist, "file '%s' does not exist in '%s'", localfile, zipfile)
 	}
 
-	return rv, fmt.Errorf("File '%s' does not exist", filename) // os.ErrNotExist
+	return rv, errors.Wrapf(os.ErrNotExist, "file '%s' does not exist", filename) // os.ErrNotExist
 }
 
 func (z *zipMap) CopyTo(filename, destination string) error {
@@ -108,24 +155,25 @@ func (z *zipMap) CopyTo(filename, destination string) error {
 
 	if err != nil {
 		return err
-	} else {
-		g, err := os.Create(destination)
-		defer g.Close()
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(g, f)
-		if err != nil {
-			return err
-		}
 	}
+
+	g, err := os.Create(destination)
+	defer g.Close()
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(g, f)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (z *zipMap) Close() {
-	for k, v := range z.zips {
-		v.Close()
-		delete(z.zips, k)
+	for _, m := range z.zipLRU {
+		m.Zip.Close()
 	}
+	z.zipLRU = z.zipLRU[:0]
 }
