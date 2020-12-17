@@ -6,11 +6,11 @@ import (
 	"os/exec"
 )
 
-func AudioOutput() (*Writer, error) {
+func AudioOutput() (Writer, error) {
 	return defaultConfig.AudioOutput()
 }
 
-func (c Config) AudioOutput() (*Writer, error) {
+func (c Config) AudioOutput() (Writer, error) {
 	format := c.playbackFormat()
 
 	if format.Format != 1 {
@@ -41,11 +41,11 @@ func (c Config) AudioOutput() (*Writer, error) {
 
 	mpl.Start()
 
-	rv := &Writer{
+	rv := &wavWriter{
 		target:        stdin,
 		targetProcess: mpl,
 		initialized:   true,
-		Format:        format,
+		format:        format,
 	}
 
 	return rv, nil

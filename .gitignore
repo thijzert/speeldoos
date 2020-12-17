@@ -1,8 +1,9 @@
 /bin/dump/dump
 /bin/extract/extract
 /bin/identity/identity
-/*.xml
-/*.zip
-/*.mp3
 /bin/editor/editor
 /bin/editor/bindata.go
+/*.xml
+/*.zip
+*.mp3
+**/testdata/license.txt

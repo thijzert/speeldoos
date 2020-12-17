@@ -81,7 +81,7 @@ func (l *Library) AllCarriers() []ParsedCarrier {
 }
 
 // Open one performance in the library and return its raw audio data
-func (l *Library) GetWAV(pf Performance) (*wavreader.Reader, error) {
+func (l *Library) GetWAV(pf Performance) (wavreader.Reader, error) {
 	var format wavreader.StreamFormat
 	bps := 0
 	fixedSize := 0
@@ -100,22 +100,22 @@ func (l *Library) GetWAV(pf Performance) (*wavreader.Reader, error) {
 		ww.Close()
 
 		if i == 0 {
-			format = ww.Format
+			format = ww.Format()
 			bps = format.Channels * ((format.Bits + 7) / 8)
-		} else if ww.Format != format {
+		} else if ww.Format() != format {
 			return nil, fmt.Errorf("audio format mismatch: part %d has %d channels, %dHz, %d bits; previously it was %d channels, %dHz, %d bits", i+1,
-				ww.Format.Channels, ww.Format.Rate, ww.Format.Bits,
+				ww.Format().Channels, ww.Format().Rate, ww.Format().Bits,
 				format.Channels, format.Rate, format.Bits)
 		}
 
-		if ww.Size == 0 || (ww.Size%bps) != 0 {
-			return nil, fmt.Errorf("wav length (%d) is not a multiple of bytes per sample (%d)", ww.Size, bps)
+		if ww.Size() == 0 || (ww.Size()%bps) != 0 {
+			return nil, fmt.Errorf("wav length (%d) is not a multiple of bytes per sample (%d)", ww.Size(), bps)
 		}
-		fixedSize += ww.Size
+		fixedSize += ww.Size()
 	}
 
 	rv, wri := wavreader.Pipe(format)
-	rv.Size = fixedSize
+	rv.SetSize(fixedSize)
 
 	go func() {
 		for _, f := range pf.SourceFiles {

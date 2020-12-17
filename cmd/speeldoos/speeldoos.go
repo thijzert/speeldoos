@@ -200,6 +200,8 @@ func getSubCmd(name string) SubCommand {
 		return play_main
 	} else if name == "seedvault" {
 		return seedvault_main
+	} else if name == "server" {
+		return server_main
 	} else {
 		return nil
 	}
