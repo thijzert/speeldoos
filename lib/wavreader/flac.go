@@ -42,7 +42,7 @@ func (c Config) newFlacReader(flacIn io.ReadCloser) (*flacReader, error) {
 
 		fr.input.Close()
 		fr.flacIn.Close()
-		for _ = range fr.finishedReading {
+		for range fr.finishedReading {
 		}
 		fr.cmd.Wait()
 	}()
@@ -84,10 +84,12 @@ func (fr *flacReader) Close() error {
 	return fr.cmd.Wait()
 }
 
+// FromFLAC creates a WAV Reader from a handle to a FLAC stream
 func FromFLAC(in io.ReadCloser) (Reader, error) {
 	return defaultConfig.FromFLAC(in)
 }
 
+// FromFLAC creates a WAV Reader from a handle to a FLAC stream
 func (c Config) FromFLAC(in io.ReadCloser) (Reader, error) {
 	wavout, err := c.newFlacReader(in)
 	if err != nil {

@@ -7,10 +7,12 @@ import (
 	"os/exec"
 )
 
+// ToMP3 creates a WAV Writer that encodes the output into an MP3 stream
 func ToMP3(mp3Out io.Writer, format StreamFormat) (Writer, error) {
 	return defaultConfig.ToMP3(mp3Out, format)
 }
 
+// ToMP3 creates a WAV Writer that encodes the output into an MP3 stream
 func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (Writer, error) {
 	var err error
 

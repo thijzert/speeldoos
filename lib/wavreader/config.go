@@ -1,5 +1,6 @@
 package wavreader
 
+// A StreamFormat wraps all options that define a PCM audio stream format
 type StreamFormat struct {
 	Format   int
 	Channels int
@@ -8,18 +9,21 @@ type StreamFormat struct {
 }
 
 var (
+	// CD is the format used on audio CD's
 	CD StreamFormat = StreamFormat{
 		Format:   1,
 		Channels: 2,
 		Rate:     44100,
 		Bits:     16,
 	}
+	// DAT is a common format used on digital media, e.g. DAT tapes
 	DAT StreamFormat = StreamFormat{
 		Format:   1,
 		Channels: 2,
 		Rate:     48000,
 		Bits:     16,
 	}
+	// DOG contains a stream format that's really only discernible from the other two by dogs
 	DOG StreamFormat = StreamFormat{
 		Format:   1,
 		Channels: 2,
@@ -28,10 +32,12 @@ var (
 	}
 )
 
-type Formater interface {
+// A Formatter interface designates which values have a stream format
+type Formatter interface {
 	Format() StreamFormat
 }
 
+// A Config wraps options common to most WAV operations
 type Config struct {
 	// Path to `lame` binary
 	LamePath string

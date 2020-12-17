@@ -11,6 +11,7 @@ const (
 	msCHUNK = 10
 )
 
+// Convert converts a Reader into a new Reader with the specified format, converting the audio signal if necessary
 func Convert(r Reader, format StreamFormat) (Reader, error) {
 	// Fast path: don't convert anything if not absolutely necessary
 	if r.Format() == format {
@@ -44,7 +45,7 @@ func doConversion(wri Writer, r Reader) (int64, error) {
 	bufBits := make([][]byte, wri.Format().Channels)
 	bufOut := make([]byte, wri.Format().Channels*saatOut*Bout)
 
-	for i, _ := range bufChan {
+	for i := range bufChan {
 		bufChan[i] = make([]byte, saatIn*Bin)
 
 		bufRate[i] = newRateConverter(r, wri.Format().Rate, bufChan[i])
@@ -259,9 +260,9 @@ func (rc *rateConverter) convert(in []byte) (int, error) {
 func square(p, t float64) float64 {
 	if t >= 0.0 && t < 1.0 {
 		return p
-	} else {
-		return 0.0
 	}
+
+	return 0.0
 }
 
 // Interpolation using Lanczos kernel with a=3
@@ -303,28 +304,28 @@ func convertBits(out []byte, in []byte, r Reader, Bin, Bout, bits int) (int, err
 		}
 
 		return n, nil
-	} else {
-		// Pad the input stream to fill the output stream
-		i, n := 0, 0
-
-		// HACK: Handle conversion from unsigned 8-bit to signed 16-bit
-		var offset uint8 = 0
-		if Bin == 1 {
-			offset = 128
-		}
-
-		for i < len(in) {
-			for j := 0; j < Bout; j++ {
-				out[n+Bout-j-1] = in[i+(Bin-(j%Bin)-1)] + offset
-				// TODO: Add dithering, or some other method of hiding rounding errors
-			}
-
-			i += Bin
-			n += Bout
-		}
-
-		return n, nil
 	}
+
+	// Pad the input stream to fill the output stream
+	i, n := 0, 0
+
+	// HACK: Handle conversion from unsigned 8-bit to signed 16-bit
+	var offset uint8 = 0
+	if Bin == 1 {
+		offset = 128
+	}
+
+	for i < len(in) {
+		for j := 0; j < Bout; j++ {
+			out[n+Bout-j-1] = in[i+(Bin-(j%Bin)-1)] + offset
+			// TODO: Add dithering, or some other method of hiding rounding errors
+		}
+
+		i += Bin
+		n += Bout
+	}
+
+	return n, nil
 }
 
 func interleave(out []byte, in [][]byte, length int, Bout int) (int, error) {

@@ -6,10 +6,12 @@ import (
 	"os/exec"
 )
 
+// AudioOutput creates a WAV Writer that pipes the audio stream to the local sound card
 func AudioOutput() (Writer, error) {
 	return defaultConfig.AudioOutput()
 }
 
+// AudioOutput creates a WAV Writer that pipes the audio stream to the local sound card
 func (c Config) AudioOutput() (Writer, error) {
 	format := c.playbackFormat()
 

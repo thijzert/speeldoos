@@ -33,7 +33,7 @@ func itoa(buf []byte, v int) {
 		v = (1 << uint(len(buf)*8)) - 1
 	}
 
-	for i, _ := range buf {
+	for i := range buf {
 		buf[i] = byte(v & 0xff)
 		v >>= 8
 	}

@@ -8,7 +8,7 @@ import (
 func TestConstant(t *testing.T) {
 	samplesIn := make([]byte, 40)
 	// Create a 125Hz sawtooth wave
-	for i, _ := range samplesIn {
+	for i := range samplesIn {
 		samplesIn[i] = byte(36 * (i % 8))
 	}
 

@@ -1,9 +1,12 @@
+/*
+Package hivemind implements a simple worker pool, basically a
+`sync.Waitgroup` with fancy terminal output. Jobs added to a hive mind are
+executed by workers until `Wait` is called.
+*/
 package hivemind
 
 import (
 	"fmt"
-	tc "github.com/thijzert/go-termcolours"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"log"
 	"os"
@@ -11,10 +14,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	tc "github.com/thijzert/go-termcolours"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
-// Package hivemind implements a simple worker pool, basically a `sync.Waitgroup` on steroids. Jobs added to a hive mind are executed by workers until `Wait` is called.
-
+// A Hivemind wraps a worker pool
 type Hivemind struct {
 	output  io.Writer
 	tty     bool
@@ -54,7 +59,7 @@ func (h *Hivemind) init() {
 	h.inbox = make(chan Job)
 	h.outbox = make(chan changeEvent)
 
-	for i, _ := range h.workers {
+	for i := range h.workers {
 		h.workers[i] = &worker{
 			ID:     i,
 			Title:  "",
@@ -151,7 +156,7 @@ func (h *Hivemind) workerStatus() string {
 	return rv
 }
 
-// Add a job to the queue. If they weren't active already, spin up the workers.
+// AddJob adds a job to the queue. If they weren't active already, spin up the workers.
 func (h *Hivemind) AddJob(j Job) {
 	if !h.running {
 		h.init()
@@ -159,7 +164,7 @@ func (h *Hivemind) AddJob(j Job) {
 	h.inbox <- j
 }
 
-// Wait for all jobs to finish, and shut down the hive.
+// Wait waits for all jobs to finish, and shuts down the hive.
 func (h *Hivemind) Wait() {
 	if !h.running {
 		return
@@ -178,6 +183,7 @@ type JC interface {
 	Printf(string, ...interface{})
 }
 
+// A Job represents anything that can be performed in the Hivemind
 type Job interface {
 	Run(j JC) error
 }

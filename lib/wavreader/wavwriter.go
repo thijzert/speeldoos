@@ -6,11 +6,17 @@ import (
 	"os/exec"
 )
 
+// A Writer represents a target into which one writes an audio stream
 type Writer interface {
 	io.WriteCloser
-	Formater
+	Formatter
 
+	// Init sets up a new writer
 	Init(int) error
+
+	// CloseWithError closes the Writer. Any subsequent writes will return the
+	// specified error. Furthermore, if the Writer is part of a pipe, reading
+	// from the Reader half also get the specified error.
 	CloseWithError(error) error
 }
 
@@ -24,6 +30,7 @@ type wavWriter struct {
 	errorState    error
 }
 
+// NewWriter instantiates a new Writer with the given audio stream format
 func NewWriter(target io.WriteCloser, format StreamFormat) Writer {
 	rv := &wavWriter{
 		target:      target,
