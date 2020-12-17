@@ -21,12 +21,12 @@ func server_main(args []string) {
 		log.Fatal(err)
 	}
 
-	ln, err := net.Listen("tcp", ":11884")
+	ln, err := net.Listen("tcp", "localhost:11884")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("Listening on *:11884")
+	log.Printf("Listening on localhost:11884")
 
 	mux := http.NewServeMux()
 	var srv http.Server

@@ -63,6 +63,15 @@ Usage:
 
     sd play
 
+### server
+Run a local webserver that streams your collection
+
+Usage:
+
+    sd server
+
+This command opens up a port on localhost (by default, http://localhost:11884) that runs a web frontend which streams your library.
+
 ### extract
 Concatenate and transcode each work's parts into large files.
 
@@ -102,7 +111,7 @@ It reads a speeldoos XML file (e.g. one created with `sd init`) and tags and ren
 
 By default, it also creates a speeldoos archive, which has all the source files for this particular carrier in one file, as well as an updated speeldoos XML which is aware of the new filenames.
 
-For each of the encodes you enable (choose from: FLAC, MP3 CBR-320, MP3 VBR-V0, VBR-V2, or VBR-V6) `sd seedvault` has the ability to create a private .torrent file of the resulting directory with a tracker URL you specify in order to, um, easily synchronize your new purchase across all your devices.
+For each of the encodes you enable (choose from: FLAC, MP3 CBR-320, MP3 VBR-V0, VBR-V2, or VBR-V6) `sd seedvault` has the ability to create a private .torrent file of the resulting directory with a tracker URL you specify in order to easily synchronize your new purchase across all your devices.
 
 Example: imagine you've just purchased Bruckner's 7th symphony at Hyperion.
 
@@ -133,7 +142,7 @@ So whenever I see an iPod refer to any music as
 
 I die a little inside.
 
-Also, there's the shufflability problem. When music players use the "shuffle" function, just playing each file in random order is fine as long as your underlying assumption holds that each file is a self-contained four minute unit. 
+Also, there's the shufflability problem. When music players use the "shuffle" function, just playing each file in random order is fine as long as your underlying assumption holds that each file is a self-contained four minute unit.
 Most classical music is not.
 
 Works *can* consist of multiple parts, yes, and those usually correspond pretty neatly to tracks on the carrier, be it a CD or regular files.
