@@ -1,4 +1,4 @@
-package speeldoos
+package pkg
 
 import (
 	"fmt"

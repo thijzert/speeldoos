@@ -7,10 +7,10 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/thijzert/speeldoos"
 	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader"
 	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
 var server_chunker chunker.Chunker

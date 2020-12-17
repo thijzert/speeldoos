@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/thijzert/go-rcfile"
-	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/wavreader"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
 var Config = struct {

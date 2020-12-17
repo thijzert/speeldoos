@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/thijzert/speeldoos"
+	"log"
+
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 	"github.com/thijzert/speeldoos/lib/hivemind"
 	"github.com/thijzert/speeldoos/lib/wavreader"
-	"log"
 )
 
 func extract_main(args []string) {

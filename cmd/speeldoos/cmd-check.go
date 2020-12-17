@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/thijzert/speeldoos"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 

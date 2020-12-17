@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/thijzert/speeldoos"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
 var defaultIndexNames = map[string]string{

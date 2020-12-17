@@ -4,9 +4,9 @@ import (
 	"io"
 	"log"
 
-	"github.com/thijzert/speeldoos"
 	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
 type playlistItem struct {

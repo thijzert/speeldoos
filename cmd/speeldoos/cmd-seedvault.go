@@ -7,11 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/anacrolix/torrent/bencode"
-	"github.com/anacrolix/torrent/metainfo"
-	tc "github.com/thijzert/go-termcolours"
-	"github.com/thijzert/speeldoos"
-	"github.com/thijzert/speeldoos/lib/zipmap"
 	"io"
 	"log"
 	"os"
@@ -22,6 +17,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/anacrolix/torrent/bencode"
+	"github.com/anacrolix/torrent/metainfo"
+	tc "github.com/thijzert/go-termcolours"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
+	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 
 var zm = zipmap.New()
@@ -681,7 +682,7 @@ func (a *album) Job(dir string, fun jobFun) {
 			log.Print(err)
 		}
 	}
-	
+
 	if Config.Seedvault.DiscImage != "" {
 		for _, d := range a.Discs {
 			dd := ""

@@ -5,7 +5,7 @@ import (
 	"regexp"
 
 	tc "github.com/thijzert/go-termcolours"
-	"github.com/thijzert/speeldoos"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
 func grep_main(args []string) {

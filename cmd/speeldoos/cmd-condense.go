@@ -10,10 +10,10 @@ import (
 	"time"
 
 	tc "github.com/thijzert/go-termcolours"
-	"github.com/thijzert/speeldoos"
 	"github.com/thijzert/speeldoos/lib/hivemind"
 	"github.com/thijzert/speeldoos/lib/wavreader"
 	"github.com/thijzert/speeldoos/lib/zipmap"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
 type condenseJob struct {
