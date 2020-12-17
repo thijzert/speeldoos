@@ -12,7 +12,7 @@ import (
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos/lib/hivemind"
 	"github.com/thijzert/speeldoos/lib/wavreader"
-	"github.com/thijzert/speeldoos/lib/zipmap"
+	"github.com/thijzert/speeldoos/lib/ziptraverser"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
@@ -23,7 +23,7 @@ type condenseJob struct {
 }
 
 func (job condenseJob) Run(h hivemind.JC) error {
-	zm := zipmap.New()
+	zm := ziptraverser.New()
 	defer zm.Close()
 
 	h.SetTitle(job.Carrier.ID)

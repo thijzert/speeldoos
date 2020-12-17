@@ -7,8 +7,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/thijzert/speeldoos/lib/ziptraverser"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
-	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 
 type fixableError string
@@ -80,7 +80,7 @@ func check_sourceFiles(foo *speeldoos.Carrier) []error {
 	rv := []error{}
 
 	seen := make([]string, 0)
-	zm := zipmap.New()
+	zm := ziptraverser.New()
 
 	for _, perf := range foo.Performances {
 		for _, sf := range perf.SourceFiles {

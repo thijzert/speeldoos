@@ -21,11 +21,11 @@ import (
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	tc "github.com/thijzert/go-termcolours"
+	"github.com/thijzert/speeldoos/lib/ziptraverser"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
-	"github.com/thijzert/speeldoos/lib/zipmap"
 )
 
-var zm = zipmap.New()
+var zm = ziptraverser.New()
 
 var (
 	checkmark = "\u2713"
@@ -197,7 +197,7 @@ func (cp *commonPath) existsForEachDisc(dir, file string) bool {
 	if file == "" {
 		return false
 	}
-	for d, _ := range cp.discs {
+	for d := range cp.discs {
 		sub := ""
 		if d > 0 {
 			sub = fmt.Sprintf("disc_%02d", d)
@@ -214,7 +214,7 @@ func (cp *commonPath) DiscPrefixes() string {
 		return ""
 	}
 	rv := ""
-	for d, _ := range cp.discs {
+	for d := range cp.discs {
 		rv += fmt.Sprintf("% 3d", d)
 	}
 	return rv
@@ -230,7 +230,7 @@ func (cp *commonPath) CheckDiscFileExists(file string) string {
 
 	rv := ""
 
-	for d, _ := range cp.discs {
+	for d := range cp.discs {
 		sub := ""
 		if d > 0 {
 			sub = fmt.Sprintf("disc_%02d", d)
@@ -307,7 +307,7 @@ func seedvault_main(argv []string) {
 		}
 	}
 	albus.Discs = make([]int, 0, len(discs))
-	for d, _ := range discs {
+	for d := range discs {
 		albus.Discs = append(albus.Discs, d)
 	}
 
@@ -948,7 +948,7 @@ func createTorrent(source, target, announce string) error {
 	defer outf.Close()
 
 	mi := metainfo.MetaInfo{
-		AnnounceList: [][]string{[]string{announce}},
+		AnnounceList: [][]string{{announce}},
 	}
 	mi.SetDefaults()
 	// mi.CreatedBy = "github.com/thijzert/speeldoos"

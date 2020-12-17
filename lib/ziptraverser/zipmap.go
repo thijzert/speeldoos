@@ -22,7 +22,7 @@
 	This library is not thread-safe in any way.
 */
 
-package zipmap
+package ziptraverser
 
 import (
 	"archive/zip"
@@ -34,17 +34,11 @@ import (
 	"strings"
 )
 
-type ZipMap struct {
+type zipMap struct {
 	zips map[string]*zip.ReadCloser
 }
 
-func New() *ZipMap {
-	rv := &ZipMap{}
-	rv.zips = make(map[string]*zip.ReadCloser)
-	return rv
-}
-
-func (z *ZipMap) Exists(filename string) bool {
+func (z *zipMap) Exists(filename string) bool {
 	f, err := z.Get(filename)
 	if err == nil {
 		f.Close()
@@ -53,7 +47,7 @@ func (z *ZipMap) Exists(filename string) bool {
 	return false
 }
 
-func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
+func (z *zipMap) Get(filename string) (io.ReadCloser, error) {
 	rv, _ := os.Open(os.DevNull)
 
 	var err error
@@ -108,7 +102,7 @@ func (z *ZipMap) Get(filename string) (io.ReadCloser, error) {
 	return rv, fmt.Errorf("File '%s' does not exist", filename) // os.ErrNotExist
 }
 
-func (z *ZipMap) CopyTo(filename, destination string) error {
+func (z *zipMap) CopyTo(filename, destination string) error {
 	f, err := z.Get(filename)
 	defer f.Close()
 
@@ -129,7 +123,7 @@ func (z *ZipMap) CopyTo(filename, destination string) error {
 	return nil
 }
 
-func (z *ZipMap) Close() {
+func (z *zipMap) Close() {
 	for k, v := range z.zips {
 		v.Close()
 		delete(z.zips, k)

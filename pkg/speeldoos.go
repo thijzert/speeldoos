@@ -15,6 +15,7 @@ type Composer struct {
 	ID string `xml:"id,attr,omitempty"`
 }
 
+// An OpusNumber represents an opus number for a composition.
 // Opus numbers, together with the composer, ideally uniquely identify a work
 type OpusNumber struct {
 	Number string `xml:",chardata"`
@@ -29,11 +30,12 @@ func (o OpusNumber) String() string {
 	}
 	if o.IndexName == "" {
 		return fmt.Sprintf("Op. %s", o.Number)
-	} else {
-		return fmt.Sprintf("%s %s", o.IndexName, o.Number)
 	}
+
+	return fmt.Sprintf("%s %s", o.IndexName, o.Number)
 }
 
+// A Title represents a work's title in a certain language
 type Title struct {
 	Title    string `xml:",chardata"`
 	Language string `xml:",attr,omitempty"`
@@ -58,6 +60,7 @@ type Work struct {
 	Year int
 }
 
+// A Part of a work
 type Part struct {
 	Part   string `xml:",chardata"`
 	Number string `xml:"number,attr,omitempty"`
@@ -77,7 +80,7 @@ type Performer struct {
 	Role string `xml:"role,attr,omitempty"`
 }
 
-// A path to a file comprising the recording
+// A SourceFile wraps the path to a file containing the recording of that particular performance
 type SourceFile struct {
 	Filename string `xml:",chardata"`
 
@@ -89,7 +92,7 @@ func (s SourceFile) String() string {
 	return s.Filename
 }
 
-// One (recording of a) performance of a Work.
+// A Performance represents one (recording of a) performance of a Work.
 type Performance struct {
 	Work Work
 
@@ -123,7 +126,7 @@ type Carrier struct {
 	Performances []Performance `xml:"Performances>Performance"`
 }
 
-// Read a serialized Carrier from a file
+// ImportCarrier reads a serialized Carrier from a file
 func ImportCarrier(filename string) (*Carrier, error) {
 	ip, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -139,7 +142,7 @@ func ImportCarrier(filename string) (*Carrier, error) {
 	return foo, nil
 }
 
-// Serialize the carrier to disk
+// Write serialises the carrier to disk
 func (c *Carrier) Write(filename string) error {
 	op, err := os.Create(filename)
 	if err != nil {

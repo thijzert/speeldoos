@@ -7,17 +7,18 @@ import (
 	"path"
 
 	"github.com/thijzert/speeldoos/lib/wavreader"
-	"github.com/thijzert/speeldoos/lib/zipmap"
+	"github.com/thijzert/speeldoos/lib/ziptraverser"
 )
 
-// A collection of Carriers
+// A Library consists of a collection of Carriers
 type Library struct {
 	LibraryDir string
 	WAVConf    wavreader.Config
 	Carriers   []ParsedCarrier
-	zip        *zipmap.ZipMap
+	zip        ziptraverser.ZipTraverser
 }
 
+// A ParsedCarrier wraps a Carrier object together with the file name it came from
 type ParsedCarrier struct {
 	// The full path to the xml file
 	Filename string
@@ -29,15 +30,16 @@ type ParsedCarrier struct {
 	Error error
 }
 
+// NewLibrary instantiates a new Library with the specified base directory
 func NewLibrary(dir string) *Library {
 	rv := &Library{
 		LibraryDir: dir,
-		zip:        zipmap.New(),
+		zip:        ziptraverser.New(),
 	}
 	return rv
 }
 
-// (Re-)read all XML files from disk, parsing any speeldoos files
+// Refresh (re-)reads all XML files from disk, parsing any speeldoos files
 func (l *Library) Refresh() error {
 	rv := []ParsedCarrier{}
 
@@ -69,7 +71,7 @@ func (l *Library) Refresh() error {
 	return nil
 }
 
-// Filter all Carriers in the library that are error-free
+// AllCarriers filters all Carriers in the library, and returns those that are error-free
 func (l *Library) AllCarriers() []ParsedCarrier {
 	rv := make([]ParsedCarrier, 0, len(l.Carriers))
 	for _, pc := range l.Carriers {
@@ -80,7 +82,7 @@ func (l *Library) AllCarriers() []ParsedCarrier {
 	return rv
 }
 
-// Open one performance in the library and return its raw audio data
+// GetWAV opens one performance in the library and return its raw audio data
 func (l *Library) GetWAV(pf Performance) (wavreader.Reader, error) {
 	var format wavreader.StreamFormat
 	bps := 0
