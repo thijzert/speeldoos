@@ -15,17 +15,17 @@ func TestConstant(t *testing.T) {
 	rIn, wIn := io.Pipe()
 	rOut, wOut := io.Pipe()
 
-	wavIn := &Reader{
+	wavIn := &wavReader{
 		source:      rIn,
 		initialized: true,
-		Format:      StreamFormat{Format: 1, Channels: 1, Rate: 1000, Bits: 8},
-		Size:        len(samplesIn),
+		format:      StreamFormat{Format: 1, Channels: 1, Rate: 1000, Bits: 8},
+		size:        len(samplesIn),
 	}
 
-	wavOut := &Writer{
+	wavOut := &wavWriter{
 		target:      wOut,
 		initialized: true,
-		Format:      StreamFormat{Format: 1, Channels: 1, Rate: 8000, Bits: 8},
+		format:      StreamFormat{Format: 1, Channels: 1, Rate: 8000, Bits: 8},
 	}
 
 	go func() {
@@ -58,5 +58,5 @@ func TestConstant(t *testing.T) {
 
 	t.Logf("In: %d", samplesIn)
 	t.Logf("Out: %d", samplesOut)
-	t.Errorf("I just like to watch")
+	t.Logf("I wouldn't know how to test the output of the sample rate conversion. Root mean square error perhaps?")
 }

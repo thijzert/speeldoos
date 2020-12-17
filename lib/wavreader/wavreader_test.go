@@ -13,17 +13,17 @@ func TestWavHeader(t *testing.T) {
 	if err != nil {
 		t.Errorf("%v", err)
 	} else {
-		if ww.Format.Channels != 5 {
-			t.Errorf("expected %d channels, got %d (%04x)", 5, ww.Format.Channels, ww.Format.Channels)
+		if ww.format.Channels != 5 {
+			t.Errorf("expected %d channels, got %d (%04x)", 5, ww.format.Channels, ww.format.Channels)
 		}
-		if ww.Format.Rate != 65536 {
-			t.Errorf("expected %d Hz, got %d (%04x)", 65536, ww.Format.Rate, ww.Format.Rate)
+		if ww.format.Rate != 65536 {
+			t.Errorf("expected %d Hz, got %d (%04x)", 65536, ww.format.Rate, ww.format.Rate)
 		}
-		if ww.Format.Bits != 8 {
-			t.Errorf("expected %d bits, got %d (%04x)", 8, ww.Format.Bits, ww.Format.Bits)
+		if ww.format.Bits != 8 {
+			t.Errorf("expected %d bits, got %d (%04x)", 8, ww.format.Bits, ww.format.Bits)
 		}
-		if ww.Size != 5 {
-			t.Errorf("expected %d bits, got %d (%04x)", 8, ww.Format.Bits, ww.Format.Bits)
+		if ww.size != 5 {
+			t.Errorf("expected %d bits, got %d (%04x)", 8, ww.format.Bits, ww.format.Bits)
 		}
 
 		buf := make([]byte, 5)
@@ -97,9 +97,12 @@ func (buf Buf) Close() error {
 	return nil
 }
 
-func parseWavString(t *testing.T, wav string) (*Reader, error) {
+func parseWavString(t *testing.T, wav string) (*wavReader, error) {
 	reader := Buf{bytes.NewBufferString(wav)}
-	wc := New(reader)
+	wc := &wavReader{
+		source:      reader,
+		initialized: false,
+	}
 	wc.Init()
 	return wc, wc.errorState
 }
