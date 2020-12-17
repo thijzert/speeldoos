@@ -44,6 +44,9 @@ func play_main(args []string) {
 			}
 			playlist <- playlistItem{Performance: pfii[i], Wav: w}
 		}
+		close(playlist)
+
+		log.Printf("This was the last performance added to the play queue")
 	}()
 
 	output, err := Config.WAVConf.AudioOutput()

@@ -77,6 +77,8 @@ func syncStreamHandler(w http.ResponseWriter, r *http.Request) {
 			playlist <- playlistItem{Performance: pfii[i], Wav: w}
 		}
 		close(playlist)
+
+		log.Printf("This was the last performance added to the play queue")
 	}()
 
 	w.Header().Set("Content-Type", "audio/mpeg")

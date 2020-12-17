@@ -41,10 +41,10 @@ func init() {
 func confirmSettings() *speeldoos.Carrier {
 	fmt.Printf("\nAbout to start an encode with the following settings:\n")
 
-	fmt.Printf("\nInput XML file: %s %s\n", checkFileExists(Config.Seedvault.InputXml), Config.Seedvault.InputXml)
+	fmt.Printf("\nInput XML file: %s %s\n", checkFileExists(Config.Seedvault.InputXML), Config.Seedvault.InputXML)
 	fmt.Printf("Output directory: %s\n", Config.Seedvault.OutputDir)
 
-	carrier, err := speeldoos.ImportCarrier(Config.Seedvault.InputXml)
+	carrier, err := speeldoos.ImportCarrier(Config.Seedvault.InputXML)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -504,7 +504,7 @@ func seedvault_main(argv []string) {
 
 		croak(zipit(path.Join(Config.Seedvault.OutputDir, source_dir), path.Join(Config.Seedvault.OutputDir, archive_name+".zip")))
 
-		bar, err := speeldoos.ImportCarrier(Config.Seedvault.InputXml)
+		bar, err := speeldoos.ImportCarrier(Config.Seedvault.InputXML)
 		croak(err)
 
 		h := sha256.New()

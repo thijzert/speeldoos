@@ -42,7 +42,7 @@ var Config = struct {
 		Discs                                   string
 	}
 	Seedvault struct {
-		InputXml, OutputDir                        string
+		InputXML, OutputDir                        string
 		CoverImage, InlayImage, DiscImage, Booklet string
 		EACLogfile, Cuesheet                       string
 		NameAfterComposer                          bool
@@ -107,7 +107,7 @@ func init() {
 
 	// }}}
 	// Settings pertaining to `sd seedvault` {{{
-	cmdline.StringVar(&Config.Seedvault.InputXml, "seedvault.input_xml", "", "Input XML file")
+	cmdline.StringVar(&Config.Seedvault.InputXML, "seedvault.input_xml", "", "Input XML file")
 	cmdline.StringVar(&Config.Seedvault.OutputDir, "seedvault.output_dir", "seedvault", "Output directory")
 
 	cmdline.StringVar(&Config.Seedvault.CoverImage, "seedvault.cover_image", "", "Path to cover image")
@@ -213,6 +213,8 @@ func main() {
 		os.Exit(1)
 		return
 	}
+
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 
 	cmd := getSubCmd(Config.Subcommand)
 	args := cmdline.Args()
