@@ -1,0 +1,26 @@
+
+.dialog {
+	@include background-colour( ui-background );
+	padding: 1.5rem;
+	border-radius: 0.25rem;
+
+	&.-narrow {
+		max-width: 27rem;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	&.-error {
+		border: thin solid;
+		@include border-colour( ui-alert );
+	}
+}
+
+main > section.dialog {
+	&:first-child {
+		margin-top: 4rem;
+	}
+	&:last-child {
+		margin-bottom: 6rem;
+	}
+}

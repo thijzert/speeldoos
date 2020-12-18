@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Speeldoos</title>
+		<meta charset="utf-8" />
+
+		<link rel="stylesheet" href="{{.AssetLocation}}/dist/css/speeldoos.css" />
+		{{if .PageCSS}}<link rel="stylesheet" href="{{.AssetLocation}}/dist/css/pages/{{.PageCSS}}.css" />{{end}}
+
+		<script type="module" src="{{.AssetLocation}}/dist/js/speeldoos.js"></script>
+		<script nomodule src="{{.AssetLocation}}/dist/ancient-js/speeldoos.js"></script>
+
+		<base href="{{.AppRoot}}" />
+	</head>
+	<body>
+
+		<nav class="main-nav">
+			<section class="-brand"><a href="{{.AppRoot}}">Speeldoos</a></section>
+		</nav>
+
+{{template `contents` .}}
+
+	</body>
+</html>

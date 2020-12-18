@@ -1,0 +1,67 @@
+
+@mixin text-colour( $name ) {
+	@if $name == 'transparent' {
+		color: transparent;
+	} @else if $name == 'white' {
+		color: #fff;
+	} @else if $name == 'black' {
+		color: #000;
+	} @else {
+		color: map-get( $colour-descriptors, $name );
+		color: var( --colour-#{$name} );
+	}
+}
+
+@mixin background-colour( $name ) {
+	@if $name == 'transparent' {
+		background-color: transparent;
+	} @else if $name == 'white' {
+		background-color: #fff;
+	} @else if $name == 'black' {
+		background-color: #000;
+	} @else {
+		background-color: map-get( $colour-descriptors, $name );
+		background-color: var( --colour-#{$name} );
+	}
+}
+
+@mixin border-colour( $name ) {
+	@if $name == 'transparent' {
+		border-color: transparent;
+	} @else if $name == 'white' {
+		border-color: #fff;
+	} @else if $name == 'black' {
+		border-color: #000;
+	} @else {
+		border-color: map-get( $colour-descriptors, $name );
+		border-color: var( --colour-#{$name} );
+	}
+}
+
+
+
+:root {
+	--colour-ui-main: #{map-get( $colour-descriptors, ui-main )};
+	--colour-ui-main-act: #{map-get( $colour-descriptors, ui-main-act )};
+	--colour-ui-alt: #{map-get( $colour-descriptors, ui-alt )};
+	--colour-ui-alt-act: #{map-get( $colour-descriptors, ui-alt-act )};
+
+	--colour-ui-accent-main: #{map-get( $colour-descriptors, ui-accent-main )};
+	--colour-ui-accent-main-act: #{map-get( $colour-descriptors, ui-accent-main-act )};
+	--colour-ui-accent-alt: #{map-get( $colour-descriptors, ui-accent-alt )};
+	--colour-ui-accent-alt-act: #{map-get( $colour-descriptors, ui-accent-alt-act )};
+
+	--colour-ui-alert: #{map-get( $colour-descriptors, ui-alert )};
+	--colour-ui-alert-act: #{map-get( $colour-descriptors, ui-alert-act )};
+
+	--colour-ui-background: #{map-get( $colour-descriptors, ui-background )};
+	--colour-ui-background-act: #{map-get( $colour-descriptors, ui-background-act )};
+	--colour-ui-text: #{map-get( $colour-descriptors, ui-text )};
+	--colour-ui-text-dim: #{map-get( $colour-descriptors, ui-text-dim )};
+
+	--colour-lightgrey: #{map-get( $colour-descriptors, lightgrey )};
+	--colour-light: #{map-get( $colour-descriptors, light )};
+	--colour-grey: #{map-get( $colour-descriptors, grey )};
+	--colour-dark: #{map-get( $colour-descriptors, dark )};
+}
+

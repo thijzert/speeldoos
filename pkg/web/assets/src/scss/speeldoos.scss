@@ -1,0 +1,35 @@
+@import "mixins/config";
+@import "mixins/fonts";
+@import "mixins/responsive";
+@import "mixins/colour-macro";
+
+@import "components/buttons";
+@import "components/dialog";
+@import "components/header_footer";
+@import "components/input";
+
+body {
+	background-color: #000;
+	@include text-colour( ui-text );
+
+	@include font-sans();
+	padding: 0;
+	margin: 0;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+a {
+	@include text-colour( ui-accent-main );
+	&:active, &:visited {
+		@include text-colour( ui-accent-main-act );
+	}
+}
+
+main {
+	> section {
+		margin: 1rem 1.25rem;
+	}
+}

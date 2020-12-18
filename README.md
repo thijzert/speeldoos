@@ -4,8 +4,8 @@ Speeldoos is a database format for Classical Music. The name is Dutch for "music
 
 This project contains the format specification as well as some utilities for working with the database format.
 
-Installation
----------------
+Building
+--------
 Different parts of speeldoos will have different dependencies; install them as needed. In no particular order, the dependencies include:
 
 * FLAC/MetaFLAC
@@ -21,15 +21,15 @@ On my machines I installed most of these using one of the following commands:
 However, your mileage may vary.
 
 Currently, this project primarily consists of the format specification (in XSD form) and one command-line utility for maintaining a local speeldoos database.
-To install this utility on mac or linux, try running:
+To compile this utility, try running:
 
-    go get -u github.com/thijzert/speeldoos/...
+    go run build.go
 
-and make sure `$GOPATH/bin` is in your PATH.
+This will produce a binary `speeldoos`, which you can park somewhere in your PATH.
 Personally, I like to alias `speeldoos` to `sd` (sorry SimpleDefects), which you can do by adding the following lines to your `~/.profile`:
 
 ```bash
-alias sd="$GOPATH/bin/speeldoos"
+alias sd="path/to/speeldoos"
 ```
 
 Afterwards (you may need to restart your shell first), use the `sd` (or `speeldoos` if you prefer) prefix to any sub-script in speeldoos, e.g.:
@@ -37,7 +37,18 @@ Afterwards (you may need to restart your shell first), use the `sd` (or `speeldo
     sd grep wohltemperirte
     sd init --composer="Johann Sebastian Bach" 48
 
-On Windows, I don't know yet.
+### Development build
+If you intend to contribute to speeldoos, running a development build is advisable. This build process consists of two parts, which can be run in parallel:
+
+* `gulp watch`
+* `go run build.go --quick --development --watch`
+
+Both these commands will keep running and watch the source tree, recompiling if changes are detected. (the js and css, and the binary, respectively).
+
+The build script also accepts a `--run` flag, which immediately runs the newly compiled binary whenever something changes.
+To continuously run a web server, one could use:
+
+    go run build.go --quick --development --watch --run -- server
 
 Usage
 -----
