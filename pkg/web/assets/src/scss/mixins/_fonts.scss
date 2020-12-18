@@ -1,0 +1,14 @@
+
+@mixin font-sans() {
+	font-family: sans-serif; // TODO-proper fonts
+}
+@mixin font-serif() {
+	font-family: serif; // TODO-proper fonts
+}
+
+@mixin font-text() {
+	@include font-sans();
+}
+@mixin font-heading() {
+	@include font-sans();
+}

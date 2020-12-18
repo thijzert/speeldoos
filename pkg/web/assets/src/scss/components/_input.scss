@@ -1,0 +1,44 @@
+
+
+.ipt {
+	margin-bottom: 1.25rem;
+
+	input[type=text],
+	input[type=password],
+	input[type=numeric],
+	select {
+		@include background-colour( ui-background );
+		border-style: solid;
+		border-width: thin;
+		border-radius: 0.25rem;
+		@include border-colour( ui-main );
+		line-height: 1.5rem;
+		padding: 0.75rem 1.25rem;
+
+		@include text-colour( ui-text );
+
+		&:focus, &:active {
+			@include background-colour( ui-background-act );
+			@include border-colour( ui-main-act );
+			box-shadow: 0 0 .125rem .125rem map-get( $colour-descriptors, ui-main );
+		}
+	}
+
+	&.-text {
+		> label {
+			display: block;
+			@include text-colour( ui-text-dim );
+		}
+		input {
+			display: block;
+			width: 100%;
+		}
+	}
+
+	&.-buttons {
+		display: grid;
+		grid-template-columns: repeat( auto-fill, minmax(9rem, 1fr) );
+		grid-template-rows: auto;
+		grid-gap: 1.25rem;
+	}
+}

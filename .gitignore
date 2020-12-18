@@ -8,3 +8,7 @@
 *.mp3
 **/testdata/license.txt
 /vendor/
+/speeldoos
+node_modules
+/pkg/web/assets.go
+/pkg/web/assets/dist

@@ -1,0 +1,481 @@
+$border-width: thin;
+
+@mixin tfbutton-height( $h ) {
+	$w : $h * (5/3);
+	height: $h;
+	line-height: $h - 2px;
+	background-size: $h * 0.65;
+	background-position: 9px center;
+	min-width: $w;
+
+	&.-mini
+	{
+		width: $w;
+		max-width: $w;
+		background-position: center;
+	}
+}
+
+@mixin mini-icon-button( $h ) {
+	@include tfbutton-height( $h );
+	padding: 0;
+	background-size: $h * 0.65;
+	background-position: center center;
+}
+
+@mixin base-background-size( $h ) {
+	background-size: $h;
+
+	&.-i25, &.-h25 {
+		background-size: 0.75 * $h;
+	}
+	&.-h30, &.-i30 {
+		background-size: 0.875 * $h;
+	}
+	&.-i50, &.-h50 {
+		background-size: 1.5 * $h;
+	}
+	&.-large {
+		background-size: 1.75 * $h;
+	}
+}
+
+@mixin base-svg( $svg ) {
+	background-image: svg-load( $svg, fill=map-get( $colour-descriptors, ui-text ) );
+
+	&.-transparent {
+		background-image: svg-load( $svg, fill=map-get( $colour-descriptors, grey ) );
+	}
+}
+
+@mixin tfbutton-color( $f, $c, $h, $d ) {
+
+	@include text-colour( $f );
+	@include background-colour( $c );
+
+	&:hover, &.-down {
+		@include background-colour( $h );
+	}
+
+	&[disabled],&.-disabled {
+		@include background-colour( $d );
+	}
+}
+
+/*
+* Buttons
+*/
+.tfbutton {
+
+	@include font-heading();
+	font-weight: 400;
+	font-size: 16px;
+	letter-spacing: .02em;
+	text-decoration: none;
+
+	box-sizing: border-box;
+	display: inline-block;
+	margin-bottom: 0;
+
+	// Default dimensions
+	height: 40px;
+	line-height: 38px;
+
+	// Minimale breedte voor desktop
+	@media (min-width: $width-canvas-desktop) {
+		min-width: 190px;
+	}
+
+	padding: 0px 12px;
+	text-align: center;
+	border-radius: 4px;
+	vertical-align: middle;
+	touch-action: manipulation;
+	cursor: pointer;
+	background-image: none;
+	background-repeat: no-repeat;
+	border: $border-width solid transparent;
+	white-space: nowrap;
+	user-select: none;
+	outline: none;
+
+	// Grote knop
+	&.-fullwidth
+	{
+		&, &.-i50 {
+			width: 100%;
+			min-width: 100%;
+			max-width: 100%;
+		}
+	}
+
+	&.-large
+	{
+		@include tfbutton-height( 50px );
+		font-size: 18px;
+	}
+
+	// Knop met minishadow
+	&.-minishadow {
+		box-shadow: 0 1px 1px 0 #CCCCCC;
+	}
+
+
+
+	// Various heights and sizes
+	&.-h25 {
+		@include tfbutton-height( 25px );
+	}
+	&.-h30 {
+		@include tfbutton-height( 30px );
+	}
+	&.-h40, & {
+		@include tfbutton-height( 40px );
+	}
+	&.-h50 {
+		@include tfbutton-height( 50px );
+		font-size: 18px;
+	}
+
+	&.-i25 {
+		@include mini-icon-button( 25px );
+	}
+	&.-i30 {
+		@include mini-icon-button( 30px );
+	}
+	&.-i40 {
+		@include mini-icon-button( 40px );
+	}
+	&.-i50 {
+		@include mini-icon-button( 50px );
+		font-size: 18px;
+	}
+
+	&.-h30, &.-h25, &.-i30, &.-i25 {
+		padding-left: 0;
+		padding-right: 0;
+	}
+
+
+
+	// Buttons in different colours
+
+	&, &.-main {
+		@include tfbutton-color( "white", "ui-main", "ui-main-act", "lightgrey" );
+
+		&.-disabled,[disabled] {
+			@include text-colour( grey );
+		}
+	}
+	&.-alt {
+		@include tfbutton-color( "white", "ui-alt", "ui-alt-act", "lightgrey" );
+
+		&.-disabled,[disabled] {
+			@include text-colour( grey );
+		}
+	}
+
+	&.-accent {
+		@include tfbutton-color( "white", "ui-accent-main", "ui-accent-main-act", "lightgrey" );
+
+		&.-disabled,[disabled] {
+			@include text-colour( grey );
+		}
+	}
+	&.-accent-alt {
+		@include tfbutton-color( "white", "ui-accent-alt", "ui-accent-alt-act", "lightgrey" );
+
+		&.-disabled,[disabled] {
+			@include text-colour( grey );
+		}
+	}
+
+
+	// De transparante versie
+	&.-transparent {
+		@include tfbutton-color( "grey", "transparent", "lightgrey", "transparent" );
+		border-width: $border-width;
+		border-style: solid;
+		@include border-colour( dark );
+
+		&.-border {
+			@include border-colour( ui-alt );
+
+			&:hover, &:active {
+				@include background-colour( lightgrey );
+			}
+
+			&:hover {
+				box-shadow: 0 0 4px 0 rgba(80,80,80,0.8);
+			}
+		}
+
+		&:hover, &:focus {
+			@include text-colour( dark );
+
+			&:active, &:focus {
+				@include text-colour( dark );
+			};
+		}
+
+		&:hover {
+			box-shadow: 0 0 4px 0 rgba(90,90,90,0.8);
+		}
+	}
+
+	&.-borderless {
+		@include tfbutton-color( #000, transparent, transparent, transparent);
+
+		&:hover,&:active,&:focus {
+			color: #666 !important;
+			box-shadow: none;
+		}
+	}
+
+	&.-light {
+		@extend .-transparent;
+		@extend .-minishadow;
+		@extend .-ripple;
+
+		height: 30px;
+		padding: 0 15px;
+		display: inline-block;
+
+		@include font-text();
+		font-size: 12px;
+		line-height: 16px;
+
+		i, span {
+			@include font-serif();
+			line-height: 30px;
+			font-style: normal;
+			vertical-align: middle;
+		}
+
+		i {
+			display: inline-block;
+			margin-left: 10px;
+
+			font-style: italic;
+			font-size: 16px;
+			font-weight: 700;
+		}
+
+		&.-white {
+			@extend .-white;
+			@extend .-minishadow;
+			color: black;
+			font-weight: 600;
+		}
+	}
+
+	// De witte versie
+	&.-white
+	{
+		@include tfbutton-color( "dark", "white", "light", "white" );
+		border: $border-width solid #fff;
+		min-width: unset;
+		font-weight: 500;
+		@include text-colour( ui-main );
+
+		&:hover, &:focus
+		{
+			color: #000;
+
+			&:active, &:focus { color: #000 };
+		}
+
+		&:hover {
+			box-shadow: 0 0 4px 0 rgba(90,90,90,0.8);
+		}
+
+		&.-accent {
+			@include text-colour( ui-accent );
+		}
+
+		&.-disabled,[disabled] {
+			@include text-colour( grey );
+		}
+	}
+
+
+
+	// Icons
+
+	&.-has-icon
+	{
+		padding-left: 40px;
+		padding-right: 10px;
+		text-align: left;
+		@include base-background-size( 16px );
+
+		&.-h30, &.-i30 {
+			padding-left: 40px;
+		}
+
+		&.-large {
+			padding-left: 60px;
+			background-position-x: 17px;
+		}
+	}
+
+	&.-has-icon-right {
+		@extend .-has-icon;
+		padding-right: 40px !important;
+		padding-left: 20px !important;
+		@include base-background-size( 16px );
+		background-position: right 10px center !important;
+
+		&.-arrow {
+			background-position: right 10px center !important;
+		}
+	}
+
+
+	&.-play {
+		@extend .-has-icon;
+		@include base-svg( "play.svg" );
+	}
+	&.-pause {
+		@extend .-has-icon;
+		@include base-svg( "pause.svg" );
+	}
+	&.-audio {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/headphones-regular.svg" );
+	}
+	&.-check {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/check-regular.svg" );
+	}
+	&.-trash {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/trash-regular.svg" );
+		@include base-background-size( 14px );
+	}
+	&.-download {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/arrow-to-bottom-regular.svg" );
+		@include base-background-size( 14px );
+	}
+	&.-upload {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/arrow-from-bottom-regular.svg" );
+		@include base-background-size( 14px );
+	}
+	&.-share {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/share-regular.svg" );
+	}
+	&.-plus {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/plus-regular.svg" );
+		@include base-background-size( 14px );
+	}
+
+
+
+	&.-arrow-right {
+		@extend .-has-icon-right;
+		@include base-svg( "font-awesome/long-arrow-right-regular.svg" );
+		// @include base-background-size( 14px );
+	}
+	&.-arrow-left {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/long-arrow-left-regular.svg" );
+		// @include base-background-size( 14px );
+	}
+	&.-chevron-right {
+		@extend .-has-icon-right;
+		@include base-svg( "font-awesome/chevron-right-regular.svg" );
+		@include base-background-size( 10px );
+	}
+	&.-chevron-left {
+		@extend .-has-icon;
+		@include base-svg( "font-awesome/chevron-left-regular.svg" );
+		@include base-background-size( 10px );
+	}
+
+
+
+	&,
+	&:active,
+	&.active {
+		&:focus,
+		&.focus {
+			outline: 0px auto -webkit-focus-ring-color;
+			outline-offset: -2px;
+			color: #eee;
+		}
+	}
+
+	&:hover,
+	&:focus,
+	&.focus {
+		color: #eee;
+		text-decoration: none;
+	}
+
+	&:hover {
+		@include background-colour( ui-main-act );
+		color: white;
+		box-shadow: 0 0 4px 0 rgba(90,90,90,0.8);
+	}
+
+	&:focus,
+	&:active,
+	&.active {
+		outline: 0;
+		//   background-image: none;
+		box-shadow: 0 0 4px 0 rgba(90,90,90,0.8);
+	}
+
+	&.disabled, &.-disabled,
+	&[disabled],
+	fieldset[disabled] & {
+		cursor: not-allowed;
+		opacity: 0.5;
+		filter: grayscale(1);
+		box-shadow: none;
+	}
+
+	a
+	{
+		&.disabled,
+		fieldset[disabled] & {
+			pointer-events: none; // Future-proof disabling of clicks on `<a>` elements
+		}
+	}
+
+
+
+
+	// Ripple effect
+	&.-ripple {
+		position: relative;
+		overflow: hidden;
+	}
+
+	&.-ripple:after {
+		content: "";
+		display: block;
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		top: 0;
+		left: 0;
+		pointer-events: none;
+		background-image: radial-gradient(circle,#000 10%,transparent 10.01%);
+		background-repeat: no-repeat;
+		background-position: 50%;
+		transform: scale(10,10);
+		opacity: 0;
+		transition: transform .25s,opacity 1s
+	}
+
+	&.-ripple:active:after {
+		transform: scale(0,0);
+		opacity: .2;
+		transition: 0s;
+	}
+}

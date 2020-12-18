@@ -1,0 +1,79 @@
+{
+  "name": "speeldoos",
+  "version": "0.3.0",
+  "description": "Speeldoos is a music player that specialises in not mangling classical music",
+  "repository": "https://github.com/thijzert/speeldoos",
+  "main": "speeldoos.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "echo \"Error: no dev specified\" && exit 1",
+    "build": "echo \"Error: no build specified\" && exit 1"
+  },
+  "author": "Thijs van Dijk",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/preset-env": "^7.12.1",
+    "autoprefixer": "^9.8.6",
+    "babel-eslint": "^10.1.0",
+    "css-mqpacker": "^7.0.0",
+    "cssnano": "^4.1.10",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0",
+    "gulp-cached": "^1.1.1",
+    "gulp-changed": "^4.0.2",
+    "gulp-clean-css": "^4.3.0",
+    "gulp-csso": "^4.0.1",
+    "gulp-debug": "^4.0.0",
+    "gulp-dependents": "^1.2.5",
+    "gulp-if": "^3.0.0",
+    "gulp-plumber": "^1.2.1",
+    "gulp-postcss": "^9.0.0",
+    "gulp-sass": "^4.1.0",
+    "gulp-sourcemaps": "^2.6.5",
+    "gulp-string-replace": "^1.1.2",
+    "gulp-svg-sprite": "^1.5.0",
+    "gulp-terser": "^1.4.1",
+    "gulp-watch-sass": "^1.4.1",
+    "postcss": "^8.1.4",
+    "postcss-inline-svg": "^5.0.0",
+    "postcss-pxtorem": "^5.1.1",
+    "postcss-reporter": "^6.0.1",
+    "postcss-svgo": "^4.0.2",
+    "prettier": "^2.1.0",
+    "stylelint": "^13.6.1",
+    "vinyl-named": "^1.1.0",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12",
+    "webpack-stream": "^5.2.1",
+    "yargs": "^15.4.1"
+  },
+  "dependencies": {
+    "@babel/runtime-corejs3": "^7.12.1",
+    "acorn": "^8.0.4",
+    "babel-loader": "^8.1.0",
+    "core-js": "^3.6.5",
+    "eslint": "^7.12.1",
+    "gulp-minify": "^3.1.0",
+    "npm-check-updates": "^7.1.1",
+    "postcss-clean": "^1.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0"
+  },
+  "optionalDependencies": {
+    "fsevents": "*"
+  },
+  "browserslist": [
+    "last 2 versions",
+    "ie 11"
+  ],
+  "cssnano": {
+    "preset": [
+      "default",
+      {
+        "discardComments": {
+          "removeAll": true
+        }
+      }
+    ]
+  }
+}

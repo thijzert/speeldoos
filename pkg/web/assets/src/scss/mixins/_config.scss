@@ -1,0 +1,69 @@
+
+////
+////  Viewport and canvas sizes
+////
+
+$width-canvas-desktop: 80rem;
+$width-canvas-smalldesktop: 64rem;
+$width-canvas-tablet: 50rem;
+$width-gutter: 1.25rem;
+
+$width-epsilon: 0.01rem;
+
+$width-max-desktop-inner: $width-canvas-desktop + 2*$width-gutter;
+
+
+
+////
+////  Colour palette
+////
+
+// https://paletton.com/#uid=33x0u0krFkHjlsmoyplvTgjHzaY
+$colour-primary-0: #14456A;   // Main Primary colour */
+$colour-primary-1: #3F6E91;
+$colour-primary-2: #255982;
+$colour-primary-3: #063254;
+$colour-primary-4: #022138;
+
+$colour-secondary-1-0: #A58116;   // Main Secondary colour (1) */
+$colour-secondary-1-1: #E2C059;
+$colour-secondary-1-2: #CAA32F;
+$colour-secondary-1-3: #826201;
+$colour-secondary-1-4: #574100;
+
+$colour-secondary-2-0: #A53F16;   // Main Secondary colour (2) */
+$colour-secondary-2-1: #E28059;
+$colour-secondary-2-2: #CA5B2F;
+$colour-secondary-2-3: #822501;
+$colour-secondary-2-4: #571900;
+
+
+////
+////  Colour descriptors
+////
+
+$colour-descriptors: (
+	ui-main:      $colour-primary-0,
+	ui-main-act:  $colour-primary-2,
+	ui-alt:       $colour-primary-1,
+	ui-alt-act:   $colour-primary-3,
+
+	ui-accent-main:     $colour-secondary-1-0,
+	ui-accent-main-act: $colour-secondary-1-2,
+	ui-accent-alt:      $colour-secondary-1-1,
+	ui-accent-alt-act:  $colour-secondary-1-3,
+
+	ui-alert:     $colour-secondary-2-3,
+	ui-alert-act: $colour-secondary-2-2,
+
+	ui-background: #202424,
+	ui-background-act: #4a4a4a,
+	ui-text: #d9d9d9,
+	ui-text-dim: #969696,
+
+	light: #f8f8fa,
+	lightgrey: #cccccc,
+	grey: #969696,
+	dark:  #4a4a4a,
+);
+
