@@ -20,6 +20,7 @@ type Server struct {
 	mux             *http.ServeMux
 	chunker         chunker.Chunker
 	parsedTemplates map[string]*template.Template
+	nowPlaying      speeldoos.Performance
 }
 
 // New instantiates a new server instance
@@ -34,7 +35,10 @@ func New(config ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	s.mux.Handle("/", s.HTMLFunc(handlers.HomeHandler, handlers.HomeDecoder, "home"))
+	s.mux.Handle("/", s.HTMLFunc(handlers.HomeHandler, handlers.HomeDecoder, "full/home"))
+
+	s.mux.Handle("/now-playing", s.HTMLFunc(handlers.NowPlayingHandler, handlers.NowPlayingDecoder, "fragment/nowPlaying"))
+
 	s.mux.HandleFunc("/assets/", s.serveStaticAsset)
 	s.mux.HandleFunc("/stream.mp3", s.asyncStreamHandler)
 
@@ -53,7 +57,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getState() handlers.State {
 	return handlers.State{
-		Library: s.config.Library,
+		Library:    s.config.Library,
+		NowPlaying: s.nowPlaying,
 	}
 }
 

@@ -96,20 +96,20 @@ func (s *Server) getTemplate(name string) (*template.Template, error) {
 
 	var tp *template.Template
 
-	if name == "basePage" {
-		b, err := getAsset(path.Join("templates", name+".html"))
-		if err != nil {
-			return nil, err
-		}
+	b, err := getAsset(path.Join("templates", name+".html"))
+	if err != nil {
+		return nil, err
+	}
 
-		funcs := template.FuncMap{}
+	funcs := template.FuncMap{}
 
+	if name == "full/basePage" {
 		tp, err = template.New("basePage").Funcs(funcs).Parse(string(b))
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		basePage, err := s.getTemplate("basePage")
+	} else if len(name) > 5 && name[:5] == "full/" {
+		basePage, err := s.getTemplate("full/basePage")
 		if err != nil {
 			return nil, err
 		}
@@ -119,12 +119,12 @@ func (s *Server) getTemplate(name string) (*template.Template, error) {
 			return nil, err
 		}
 
-		b, err := getAsset(path.Join("templates", name+".html"))
+		_, err = tp.Parse(string(b))
 		if err != nil {
 			return nil, err
 		}
-
-		_, err = tp.Parse(string(b))
+	} else {
+		tp, err = template.New("basePage").Funcs(funcs).Parse(string(b))
 		if err != nil {
 			return nil, err
 		}

@@ -119,7 +119,7 @@ const compileToES2015 = function()
 	});
 
 
-	return gulp.src([ "pkg/web/assets/src/js/*.js" ]).
+	return gulp.src([ "pkg/web/assets/src/js/**/*.js" ]).
 		pipe(changed("pkg/web/assets/dist/js/", { hasChanged: changed.compareContents })).
 		pipe(gulpif(!argv.production, sourcemaps.init())).
 		pipe(localBabel).
@@ -137,7 +137,7 @@ const compileBothScripts = gulp.series( compileToES2015, compileToES5 );
 
 const watchScript = function()
 {
-	gulp.watch( [ "pkg/web/assets/src/js/*.js" ], compileBothScripts );
+	gulp.watch( [ "pkg/web/assets/src/js/**/*.js" ], compileBothScripts );
 };
 
 // Compile CSS

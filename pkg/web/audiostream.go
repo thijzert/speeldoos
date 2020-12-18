@@ -56,6 +56,7 @@ func (s *Server) initAudioStream() error {
 		defer s.chunker.Close()
 
 		for item := range playlist {
+			s.nowPlaying = item.Performance
 			log.Printf("Now playing: %s - %s", item.Performance.Work.Composer.Name, item.Performance.Work.Title[0].Title)
 			defer item.Wav.Close()
 

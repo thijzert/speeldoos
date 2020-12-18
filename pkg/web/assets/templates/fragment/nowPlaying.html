@@ -1,0 +1,21 @@
+
+{{ with $performance := .Response.NowPlaying }}
+
+<div class="performanceBlock">
+	<h2 class="-title">{{ (index $performance.Work.Title 0).Title }}</h2>
+	<h3 class="-composer">{{ $performance.Work.Composer.Name }}</h3>
+	{{ if gt ( len $performance.Work.OpusNumber ) 0 }}
+		<ul>
+			{{ range $i, $opus := $performance.Work.OpusNumber }}
+				<li>{{ $opus }}</li>
+			{{ end }}
+		</ul>
+	{{ end }}
+	<ul class="-performers">
+		{{ range $i, $performer := $performance.Performers }}
+			<li class="-{{ $performer.Role }}">{{ $performer.Name }}</li>
+		{{ end }}
+	</ul>
+</div>
+
+{{ end }}
