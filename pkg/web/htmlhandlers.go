@@ -29,6 +29,11 @@ func (s *Server) HTMLFunc(handler handlers.RequestHandler, decoder handlers.Requ
 	}
 }
 
+var csp string
+
+func init() {
+}
+
 func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req, err := h.RequestDecoder(r)
 	if err != nil {
@@ -56,6 +61,21 @@ func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header()["Content-Type"] = []string{"text/html; charset=UTF-8"}
+
+	csp := ""
+	csp += "default-src 'self' blob: data: ; "
+	csp += "script-src 'self' blob: ; "
+	csp += "style-src 'self' data: 'unsafe-inline'; "
+	csp += "img-src 'self' blob: data: ; "
+	csp += "connect-src 'self' blob: data: ; "
+	csp += "frame-src 'none' ; "
+	csp += "frame-ancestors 'none'; "
+	csp += "form-action 'self'; "
+	w.Header()["Content-Security-Policy"] = []string{csp}
+	w.Header()["X-Frame-Options"] = []string{"deny"}
+	w.Header()["X-XSS-Protection"] = []string{"1; mode=block"}
+	w.Header()["Referrer-Policy"] = []string{"strict-origin-when-cross-origin"}
+	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
 
 	tpData := struct {
 		AppRoot       string

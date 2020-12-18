@@ -29,6 +29,7 @@ func (s *Server) JSONFunc(handler handlers.RequestHandler, decoder handlers.Requ
 
 func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
 
 	req, err := h.RequestDecoder(r)
 	if err != nil {
