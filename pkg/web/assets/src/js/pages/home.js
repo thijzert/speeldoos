@@ -13,4 +13,5 @@ async function reloadNowPlaying() {
 
 export function homeMain() {
 	window.setInterval(reloadNowPlaying, 4000);
+	reloadNowPlaying();
 }
