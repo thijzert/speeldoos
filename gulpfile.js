@@ -32,7 +32,6 @@ let webpack         = require('webpack');
 let gulpif          = require('gulp-if');
 let argv            = require('yargs').argv;
 let named           = require('vinyl-named')
-let svgSprite       = require('gulp-svg-sprite');
 let babel           = require('gulp-babel');
 let changed         = require('gulp-changed');
 let csso            = require('gulp-csso');
