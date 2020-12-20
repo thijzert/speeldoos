@@ -32,7 +32,7 @@ func (c Config) ToMP3(mp3Out io.Writer, format StreamFormat) (Writer, error) {
 		"-m", mode,
 	}
 	if c.MaxBitrate > 0 {
-		lamecmd = append(lamecmd, "-B", fmt.Sprintf("%d", c.MaxBitrate))
+		lamecmd = append(lamecmd, "--abr", fmt.Sprintf("%d", c.MaxBitrate))
 	} else {
 		lamecmd = append(lamecmd, "--vbr-new", fmt.Sprintf("-V%d", c.VBRQuality))
 	}
