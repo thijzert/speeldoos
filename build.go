@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -20,22 +21,30 @@ import (
 
 type job func(ctx context.Context) error
 
+type compileConfig struct {
+	Development bool
+	Quick       bool
+	GOOS        string
+	GOARCH      string
+}
+
 func main() {
 	if _, err := os.Stat("pkg/web/assets"); err != nil {
 		log.Fatalf("Error: cannot find speeldoos assets directory. (error: %s)\nAre you running this from the repository root?", err)
 	}
 
-	devBuild := false
-	quickBuild := false
+	var conf compileConfig
 	watch := false
 	run := false
-	flag.BoolVar(&devBuild, "development", false, "Create a development build")
-	flag.BoolVar(&quickBuild, "quick", false, "Create a development build")
+	flag.BoolVar(&conf.Development, "development", false, "Create a development build")
+	flag.BoolVar(&conf.Quick, "quick", false, "Create a development build")
+	flag.StringVar(&conf.GOARCH, "GOARCH", "", "Cross-compile for architecture")
+	flag.StringVar(&conf.GOOS, "GOOS", "", "Cross-compile for operating system")
 	flag.BoolVar(&watch, "watch", false, "Watch source tree for changes")
 	flag.BoolVar(&run, "run", false, "Run speeldoos upon successful compilation")
 	flag.Parse()
 
-	if devBuild && quickBuild {
+	if conf.Development && conf.Quick {
 		log.Printf("")
 		log.Printf("You requested a quick build. This will assume")
 		log.Printf(" you have a version of  `gulp watch`  running")
@@ -47,7 +56,7 @@ func main() {
 
 	if run {
 		theJob = func(ctx context.Context) error {
-			err := compile(ctx, devBuild, quickBuild)
+			err := compile(ctx, conf)
 			if err != nil {
 				return err
 			}
@@ -56,7 +65,7 @@ func main() {
 		}
 	} else {
 		theJob = func(ctx context.Context) error {
-			return compile(ctx, devBuild, quickBuild)
+			return compile(ctx, conf)
 		}
 	}
 
@@ -70,10 +79,10 @@ func main() {
 	}
 }
 
-func compile(ctx context.Context, devBuild, quickBuild bool) error {
+func compile(ctx context.Context, conf compileConfig) error {
 	// Check for local gulp
 	fi, err := os.Stat("node_modules/.bin/gulp")
-	if (!devBuild && !quickBuild) || err != nil || fi.Mode()&0x1 != 1 {
+	if (!conf.Development && !conf.Quick) || err != nil || fi.Mode()&0x1 != 1 {
 		err = passthru(ctx, "npm", "install")
 		if err != nil {
 			return errors.WithMessage(err, "error installing local gulp")
@@ -82,10 +91,10 @@ func compile(ctx context.Context, devBuild, quickBuild bool) error {
 
 	// Compile static assets
 	production := "--production"
-	if devBuild {
+	if conf.Development {
 		production = "--development"
 	}
-	if !devBuild || !quickBuild {
+	if !conf.Development || !conf.Quick {
 		err = passthru(ctx, "node_modules/.bin/gulp", "compile", production)
 		if err != nil {
 			return errors.WithMessage(err, "error compiling assets")
@@ -99,7 +108,7 @@ func compile(ctx context.Context, devBuild, quickBuild bool) error {
 	var emb resemble.Resemble
 	emb.OutputFile = "../assets.go"
 	emb.PackageName = "web"
-	emb.Debug = devBuild
+	emb.Debug = conf.Development
 	emb.AssetPaths = []string{
 		".",
 	}
@@ -110,19 +119,35 @@ func compile(ctx context.Context, devBuild, quickBuild bool) error {
 	os.Chdir("../../..")
 
 	// Build main executable
+	execOutput := "speeldoos"
+	if runtime.GOOS == "windows" || conf.GOOS == "windows" {
+		execOutput = "speeldoos.exe"
+	}
+
 	gofiles, err := filepath.Glob("cmd/speeldoos/*.go")
 	if err != nil || gofiles == nil {
 		return errors.WithMessage(err, "error: cannot find any go files to compile.")
 	}
 	compileArgs := append([]string{
-		"go", "build", "-o", "speeldoos",
+		"build", "-o", execOutput,
 	}, gofiles...)
-	err = passthru(ctx, compileArgs...)
+
+	compileCmd := exec.CommandContext(ctx, "go", compileArgs...)
+
+	compileCmd.Env = append(compileCmd.Env, os.Environ()...)
+	if conf.GOOS != "" {
+		compileCmd.Env = append(compileCmd.Env, "GOOS="+conf.GOOS)
+	}
+	if conf.GOARCH != "" {
+		compileCmd.Env = append(compileCmd.Env, "GOARCH="+conf.GOARCH)
+	}
+
+	err = passthruCmd(compileCmd)
 	if err != nil {
 		return errors.WithMessage(err, "compilation failed")
 	}
 
-	if devBuild && !quickBuild {
+	if conf.Development && !conf.Quick {
 		log.Printf("")
 		log.Printf("Development build finished. For best results,")
 		log.Printf(" run  `node_modules/.bin/gulp watch`  in a")
@@ -137,6 +162,10 @@ func compile(ctx context.Context, devBuild, quickBuild bool) error {
 
 func passthru(ctx context.Context, argv ...string) error {
 	c := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	return passthruCmd(c)
+}
+
+func passthruCmd(c *exec.Cmd) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Stdin = os.Stdin
