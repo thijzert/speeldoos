@@ -6,7 +6,13 @@ This project contains the format specification as well as some utilities for wor
 
 Building
 --------
-Different parts of speeldoos will have different dependencies; install them as needed. In no particular order, the dependencies include:
+Speeldoos has some compile-time dependencies:
+
+* Go (≥ 1.15, though some older releases wil probably also work)
+* NodeJS (≥ 14 - using a LTS release is highly recommended)
+
+To run, different parts of speeldoos will have different dependencies; install them as needed.
+In no particular order, the runtime dependencies include:
 
 * FLAC/MetaFLAC
 * LAME
@@ -15,8 +21,8 @@ Different parts of speeldoos will have different dependencies; install them as n
 
 On my machines I installed most of these using one of the following commands:
 
-* `sudo apt-get install flac lame id3v2 mplayer`
-* `sudo pacman -S flac lame id3v2 mplayer`
+* `sudo apt-get install flac lame id3v2 mplayer nodejs`
+* `sudo pacman -S flac lame id3v2 mplayer nodejs-lts-fermium`
 
 However, your mileage may vary.
 
