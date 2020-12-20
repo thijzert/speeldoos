@@ -27,6 +27,13 @@ var Config = struct {
 		Quality   int
 		OutputDir string
 	}
+	Server struct {
+		Listen  string
+		Encoder struct {
+			MaxBitrate int
+			VBRQuality int
+		}
+	}
 	Extract struct {
 		Bitrate string
 	}
@@ -104,6 +111,13 @@ func init() {
 	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Channels, "play.channels", 2, "Number of output channels (1=mono, 2=stereo)")
 	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Rate, "play.rate", 44100, "Playback sample rate.")
 	cmdline.IntVar(&Config.WAVConf.PlaybackFormat.Bits, "play.bits", 16, "Playback audio resolution")
+
+	// }}}
+	// Settings for `sd server` {{{
+
+	cmdline.StringVar(&Config.Server.Listen, "server.listen", "localhost:11884", "Address and port on which to listen")
+	cmdline.IntVar(&Config.Server.Encoder.MaxBitrate, "server.encoder.bitrate", 0, "MP3 stream bitrate (ABR mode) (value 16-320; higher is better)")
+	cmdline.IntVar(&Config.Server.Encoder.VBRQuality, "server.encoder.vbr", 0, "MP3 stream quality preset (VBR mode) (value 0-9); lower is better)")
 
 	// }}}
 	// Settings pertaining to `sd seedvault` {{{

@@ -11,7 +11,8 @@ import (
 
 // A ServerConfig combines common options for running a HTTP frontend
 type ServerConfig struct {
-	Library *speeldoos.Library
+	Library      *speeldoos.Library
+	StreamConfig chunker.MP3ChunkConfig
 }
 
 // A Server wraps a HTTP frontend

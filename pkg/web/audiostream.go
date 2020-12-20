@@ -8,7 +8,6 @@ import (
 
 	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader"
-	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
@@ -47,7 +46,7 @@ func (s *Server) initAudioStream() error {
 		close(playlist)
 	}()
 
-	s.chunker, err = chunker.NewMP3()
+	s.chunker, err = s.config.StreamConfig.NewMP3()
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package chunker
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -11,17 +12,21 @@ import (
 
 const mp3ReadAhead time.Duration = 30 * time.Second
 
-type mp3Chunker struct {
-	audioIn wavreader.Writer
-	mp3out  *io.PipeReader
-	embargo time.Time
-	chcont  *chunkContainer
+var defaultMP3Config MP3ChunkConfig
+
+func init() {
+	defaultMP3Config.Audio.PlaybackFormat = wavreader.DAT
 }
 
-func NewMP3() (Chunker, error) {
+type MP3ChunkConfig struct {
+	Context context.Context
+	Audio   wavreader.Config
+}
+
+func (m MP3ChunkConfig) NewMP3() (Chunker, error) {
 	r, w := io.Pipe()
 
-	wavin, err := wavreader.ToMP3(w, wavreader.DAT)
+	wavin, err := m.Audio.ToMP3(w, m.Audio.PlaybackFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -40,6 +45,17 @@ func NewMP3() (Chunker, error) {
 	go rv.splitChunks()
 
 	return rv, nil
+}
+
+type mp3Chunker struct {
+	audioIn wavreader.Writer
+	mp3out  *io.PipeReader
+	embargo time.Time
+	chcont  *chunkContainer
+}
+
+func NewMP3() (Chunker, error) {
+	return defaultMP3Config.NewMP3()
 }
 
 func (m *mp3Chunker) Init(fixedSize int) error {
