@@ -81,6 +81,7 @@ func check_sourceFiles(foo *speeldoos.Carrier) []error {
 
 	seen := make([]string, 0)
 	zm := ziptraverser.New()
+	defer zm.Close()
 
 	for _, perf := range foo.Performances {
 		for _, sf := range perf.SourceFiles {
