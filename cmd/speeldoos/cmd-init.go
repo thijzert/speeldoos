@@ -84,6 +84,7 @@ func detectFiles(dirname, ext string) []detectedFile {
 func detectAllFiles(dirname, ext string) map[int]detectedDisc {
 	rv := make(map[int]detectedDisc)
 
+	lastDirWithFiles := ""
 	dsf := detectFiles(dirname, ext)
 	if len(dsf) > 0 {
 		rv[0] = detectedDisc{
@@ -112,23 +113,39 @@ func detectAllFiles(dirname, ext string) map[int]detectedDisc {
 			continue
 		}
 
+		fullpath := path.Join(dirname, name)
+		ssf := detectFiles(fullpath, ext)
+
 		disc := 0
 		digmatch := number.FindStringIndex(name)
-		if digmatch == nil {
+		if digmatch != nil {
+			fmt.Sscan(name[digmatch[0]:digmatch[1]], &disc)
+		}
+
+		if disc < 1 || disc > 100 {
+			if len(ssf) > 0 {
+				dsf = ssf
+				lastDirWithFiles = fullpath
+			}
 			continue
 		}
-		fmt.Sscan(name[digmatch[0]:digmatch[1]], &disc)
-
 		if _, ok := rv[disc]; ok {
 			continue
 		}
 
-		fullpath := path.Join(dirname, name)
-		ssf := detectFiles(fullpath, ext)
 		if len(ssf) > 0 {
 			rv[disc] = detectedDisc{
 				path:  fullpath,
 				files: ssf,
+			}
+		}
+	}
+
+	if _, ok := rv[0]; !ok {
+		if len(dsf) > 0 {
+			rv[0] = detectedDisc{
+				path:  lastDirWithFiles,
+				files: dsf,
 			}
 		}
 	}
