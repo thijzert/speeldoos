@@ -44,12 +44,26 @@ func check_main(args []string) {
 			continue
 		}
 
+		if len(args) > 0 {
+			found := false
+			for _, arg := range args {
+				if pc.Carrier.ID == arg {
+					found = true
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
+		errorsFound := false
 		modified := false
 
 		for _, f := range allChecks {
 			errs := f(pc.Carrier)
 			if errs != nil {
 				for _, e := range errs {
+					errorsFound = true
 					if ff, ok := e.(fixableError); ok {
 						modified = true
 						fmt.Printf("%s: %s (fixed)\n", pc.Filename, ff)
@@ -63,6 +77,9 @@ func check_main(args []string) {
 
 		if modified {
 			pc.Carrier.Write(pc.Filename)
+		}
+		if !errorsFound {
+			fmt.Printf("%s: no errors\n", pc.Filename)
 		}
 	}
 
@@ -80,12 +97,12 @@ func check_sourceFiles(foo *speeldoos.Carrier) []error {
 	rv := []error{}
 
 	seen := make([]string, 0)
-	zm := ziptraverser.New()
-	defer zm.Close()
+	ztr := ziptraverser.New()
+	defer ztr.Close()
 
 	for _, perf := range foo.Performances {
 		for _, sf := range perf.SourceFiles {
-			if !zm.Exists(path.Join(Config.LibraryDir, sf.Filename)) {
+			if !ztr.Exists(path.Join(Config.LibraryDir, sf.Filename)) {
 				rv = append(rv, fmt.Errorf("source file missing: %s", sf))
 			}
 
