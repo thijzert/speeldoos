@@ -90,6 +90,11 @@ func Float32() float32 { return globalRand.Float32() }
 // from the default Source.
 func Perm(n int) []int { return globalRand.Perm(n) }
 
+// Shuffle pseudo-randomizes the order of elements using the default Source.
+// n is the number of elements. Shuffle panics if n < 0.
+// swap swaps the elements with indexes i and j.
+func Shuffle(n int, swap func(i, j int)) { globalRand.Shuffle(n, swap) }
+
 // Read generates len(p) random bytes from the default Source and
 // writes them into p. It always returns len(p) and a nil error.
 // Read, unlike the Rand.Read method, is safe for concurrent use.
