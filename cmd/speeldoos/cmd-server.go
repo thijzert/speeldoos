@@ -6,10 +6,10 @@ import (
 	"net"
 	"net/http"
 
+	plumbing "github.com/thijzert/speeldoos/internal/web-plumbing"
 	"github.com/thijzert/speeldoos/lib/wavreader"
 	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
-	"github.com/thijzert/speeldoos/pkg/web"
 )
 
 var server_chunker chunker.Chunker
@@ -31,11 +31,11 @@ func server_main(args []string) {
 	l.WAVConf = Config.WAVConf
 	l.Refresh()
 
-	conf := web.ServerConfig{
+	conf := plumbing.ServerConfig{
 		Library:      l,
 		StreamConfig: mc,
 	}
-	s, err := web.New(conf)
+	s, err := plumbing.New(conf)
 	if err != nil {
 		log.Fatal(err)
 	}

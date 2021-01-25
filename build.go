@@ -106,8 +106,8 @@ func compile(ctx context.Context, conf compileConfig) error {
 		return errors.Errorf("Error: cannot find speeldoos assets directory. (error: %s)\nAre you *sure* you're running this from the repository root?", err)
 	}
 	var emb resemble.Resemble
-	emb.OutputFile = "../assets.go"
-	emb.PackageName = "web"
+	emb.OutputFile = "../../../internal/web-plumbing/assets.go"
+	emb.PackageName = "plumbing"
 	emb.Debug = conf.Development
 	emb.AssetPaths = []string{
 		".",

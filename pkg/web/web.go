@@ -1,69 +1,43 @@
 package web
 
 import (
-	"html/template"
 	"net/http"
 
-	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
-	"github.com/thijzert/speeldoos/pkg/web/handlers"
 )
 
-// A ServerConfig combines common options for running a HTTP frontend
-type ServerConfig struct {
-	Library      *speeldoos.Library
-	StreamConfig chunker.MP3ChunkConfig
+// The State struct represents the current state of the world
+type State struct {
+	Library    *speeldoos.Library
+	NowPlaying speeldoos.Performance
 }
 
-// A Server wraps a HTTP frontend
-type Server struct {
-	config          ServerConfig
-	mux             *http.ServeMux
-	chunker         chunker.Chunker
-	parsedTemplates map[string]*template.Template
-	nowPlaying      speeldoos.Performance
+var (
+	// ErrParser is thrown when a request object is of the wrong type
+	ErrParser error = errParse{}
+)
+
+type errParse struct{}
+
+func (errParse) Error() string {
+	return "parse error while decoding request"
 }
 
-// New instantiates a new server instance
-func New(config ServerConfig) (*Server, error) {
-	s := &Server{
-		config: config,
-		mux:    http.NewServeMux(),
-	}
-
-	err := s.initAudioStream()
-	if err != nil {
-		return nil, err
-	}
-
-	s.mux.Handle("/", s.HTMLFunc(handlers.HomeHandler, handlers.HomeDecoder, "full/home"))
-
-	s.mux.Handle("/now-playing", s.HTMLFunc(handlers.NowPlayingHandler, handlers.NowPlayingDecoder, "fragment/nowPlaying"))
-
-	s.mux.HandleFunc("/assets/", s.serveStaticAsset)
-	s.mux.HandleFunc("/stream.mp3", s.asyncStreamHandler)
-
-	return s, nil
+// A Request flags any request type
+type Request interface {
+	FlaggedAsRequest()
 }
 
-// Close frees any held resources
-func (s *Server) Close() error {
-	// TODO: actually close some resources
-	return nil
+// A Response flags any response type
+type Response interface {
+	FlaggedAsResponse()
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.mux.ServeHTTP(w, r)
-}
+// A RequestDecoder turns a HTTP request into a domain-specific request type
+type RequestDecoder func(*http.Request) (Request, error)
 
-func (s *Server) getState() handlers.State {
-	return handlers.State{
-		Library:    s.config.Library,
-		NowPlaying: s.nowPlaying,
-	}
-}
-
-// setState writes back any modified fields to the global state
-func (s *Server) setState(handlers.State) error {
-	return nil
-}
+// A RequestHandler is a monadic definition of a request handler. The inputs are
+// the current state of the world, and a handler-specific request type, and the
+// output is the new state of the world (which may or may not be the same), a
+// handler-specific response type, and/or an error.
+type RequestHandler func(State, Request) (State, Response, error)

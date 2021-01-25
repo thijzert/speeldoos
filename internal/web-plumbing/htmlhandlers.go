@@ -1,4 +1,4 @@
-package web
+package plumbing
 
 import (
 	"bytes"
@@ -9,18 +9,18 @@ import (
 	"path"
 	"strings"
 
-	"github.com/thijzert/speeldoos/pkg/web/handlers"
+	"github.com/thijzert/speeldoos/pkg/web"
 )
 
 type htmlHandler struct {
 	Server         *Server
 	TemplateName   string
-	RequestDecoder handlers.RequestDecoder
-	Handler        handlers.RequestHandler
+	RequestDecoder web.RequestDecoder
+	Handler        web.RequestHandler
 }
 
 // HTMLFunc creates a HTTP handler that outputs HTML
-func (s *Server) HTMLFunc(handler handlers.RequestHandler, decoder handlers.RequestDecoder, templateName string) http.Handler {
+func (s *Server) HTMLFunc(handler web.RequestHandler, decoder web.RequestDecoder, templateName string) http.Handler {
 	return htmlHandler{
 		Server:         s,
 		TemplateName:   templateName,
@@ -81,8 +81,8 @@ func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		AppRoot       string
 		AssetLocation string
 		PageCSS       string
-		Request       handlers.Request
-		Response      handlers.Response
+		Request       web.Request
+		Response      web.Response
 	}{
 		AppRoot:       h.appRoot(r),
 		AssetLocation: h.appRoot(r) + "assets",

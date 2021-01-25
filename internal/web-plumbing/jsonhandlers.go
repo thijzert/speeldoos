@@ -1,4 +1,4 @@
-package web
+package plumbing
 
 import (
 	"bytes"
@@ -7,18 +7,18 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/thijzert/speeldoos/pkg/web/handlers"
+	"github.com/thijzert/speeldoos/pkg/web"
 )
 
 type jsonHandler struct {
 	Server         *Server
 	TemplateName   string
-	RequestDecoder handlers.RequestDecoder
-	Handler        handlers.RequestHandler
+	RequestDecoder web.RequestDecoder
+	Handler        web.RequestHandler
 }
 
 // JSONFunc creates a HTTP handler that outputs JSON
-func (s *Server) JSONFunc(handler handlers.RequestHandler, decoder handlers.RequestDecoder, templateName string) http.Handler {
+func (s *Server) JSONFunc(handler web.RequestHandler, decoder web.RequestDecoder, templateName string) http.Handler {
 	return jsonHandler{
 		Server:         s,
 		TemplateName:   templateName,

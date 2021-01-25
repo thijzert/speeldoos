@@ -11,5 +11,5 @@
 /speeldoos
 /speeldoos.exe
 node_modules
-/pkg/web/assets.go
+/internal/web-plumbing/assets.go
 /pkg/web/assets/dist
