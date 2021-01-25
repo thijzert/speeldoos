@@ -2,21 +2,33 @@ package web
 
 import "net/http"
 
-type emptyRequest struct{}
+var HomeHandler homeHandler
 
-func (emptyRequest) FlaggedAsRequest() {}
+type homeHandler struct{}
 
-// HomeDecoder decodes a request for the home page
-func HomeDecoder(r *http.Request) (Request, error) {
-	return emptyRequest{}, nil
-}
-
-type homeResponse struct {
-}
-
-func (homeResponse) FlaggedAsResponse() {}
-
-// HomeHandler handles requests for the home page
-func HomeHandler(s State, _ Request) (State, Response, error) {
+func (homeHandler) handleHome(s State, r homeRequest) (State, homeResponse, error) {
 	return s, homeResponse{}, nil
 }
+
+func (homeHandler) DecodeRequest(r *http.Request) (Request, error) {
+	return homeRequest{}, nil
+}
+
+func (h homeHandler) HandleRequest(s State, r Request) (State, Response, error) {
+	req, ok := r.(homeRequest)
+	if !ok {
+		return withError(s, errWrongRequestType{})
+	}
+
+	return h.handleHome(s, req)
+}
+
+type homeRequest struct {
+	Path string
+}
+
+func (homeRequest) FlaggedAsRequest() {}
+
+type homeResponse struct{}
+
+func (homeResponse) FlaggedAsResponse() {}

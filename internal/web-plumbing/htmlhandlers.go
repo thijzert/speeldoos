@@ -9,23 +9,22 @@ import (
 	"path"
 	"strings"
 
+	weberrors "github.com/thijzert/speeldoos/internal/web-plumbing/errors"
 	"github.com/thijzert/speeldoos/pkg/web"
 )
 
 type htmlHandler struct {
-	Server         *Server
-	TemplateName   string
-	RequestDecoder web.RequestDecoder
-	Handler        web.RequestHandler
+	Server       *Server
+	TemplateName string
+	Handler      web.Handler
 }
 
 // HTMLFunc creates a HTTP handler that outputs HTML
-func (s *Server) HTMLFunc(handler web.RequestHandler, decoder web.RequestDecoder, templateName string) http.Handler {
+func (s *Server) HTMLFunc(handler web.Handler, templateName string) http.Handler {
 	return htmlHandler{
-		Server:         s,
-		TemplateName:   templateName,
-		RequestDecoder: decoder,
-		Handler:        handler,
+		Server:       s,
+		TemplateName: templateName,
+		Handler:      handler,
 	}
 }
 
@@ -35,7 +34,7 @@ func init() {
 }
 
 func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	req, err := h.RequestDecoder(r)
+	req, err := h.Handler.DecodeRequest(r)
 	if err != nil {
 		h.Error(w, r, err)
 		return
@@ -48,7 +47,7 @@ func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	state := h.Server.getState()
-	newState, resp, err := h.Handler(state, req)
+	newState, resp, err := h.Handler.HandleRequest(state, req)
 	if err != nil {
 		h.Error(w, r, err)
 		return
@@ -164,8 +163,21 @@ func (htmlHandler) appRoot(r *http.Request) string {
 	return strings.Repeat("../", c)
 }
 
-func (htmlHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
-	// TODO: we may need to set a different status entirely
-	w.WriteHeader(500)
+func (h htmlHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
+	st, _ := weberrors.HTTPStatusCode(err)
+
+	if redir, ok := err.(weberrors.Redirector); ok {
+		if st == 0 {
+			st = 302
+		}
+		h.Server.redirect(w, r, h.appRoot(r)+redir.RedirectLocation(), st)
+		return
+	}
+
+	if st == 0 {
+		st = 500
+	}
+
+	w.WriteHeader(st)
 	fmt.Fprintf(w, "Error: %s", err)
 }

@@ -36,9 +36,9 @@ func New(config ServerConfig) (*Server, error) {
 		return nil, err
 	}
 
-	s.mux.Handle("/", s.HTMLFunc(web.HomeHandler, web.HomeDecoder, "full/home"))
+	s.mux.Handle("/", s.HTMLFunc(web.HomeHandler, "full/home"))
 
-	s.mux.Handle("/now-playing", s.HTMLFunc(web.NowPlayingHandler, web.NowPlayingDecoder, "fragment/nowPlaying"))
+	s.mux.Handle("/now-playing", s.HTMLFunc(web.NowPlayingHandler, "fragment/nowPlaying"))
 
 	s.mux.HandleFunc("/assets/", s.serveStaticAsset)
 	s.mux.HandleFunc("/stream.mp3", s.asyncStreamHandler)

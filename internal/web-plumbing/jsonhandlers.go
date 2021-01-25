@@ -11,19 +11,15 @@ import (
 )
 
 type jsonHandler struct {
-	Server         *Server
-	TemplateName   string
-	RequestDecoder web.RequestDecoder
-	Handler        web.RequestHandler
+	Server  *Server
+	Handler web.Handler
 }
 
 // JSONFunc creates a HTTP handler that outputs JSON
-func (s *Server) JSONFunc(handler web.RequestHandler, decoder web.RequestDecoder, templateName string) http.Handler {
+func (s *Server) JSONFunc(handler web.Handler) http.Handler {
 	return jsonHandler{
-		Server:         s,
-		TemplateName:   templateName,
-		RequestDecoder: decoder,
-		Handler:        handler,
+		Server:  s,
+		Handler: handler,
 	}
 }
 
@@ -31,14 +27,14 @@ func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header()["Content-Type"] = []string{"application/json"}
 	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
 
-	req, err := h.RequestDecoder(r)
+	req, err := h.Handler.DecodeRequest(r)
 	if err != nil {
 		h.Error(w, r, err)
 		return
 	}
 
 	state := h.Server.getState()
-	newState, resp, err := h.Handler(state, req)
+	newState, resp, err := h.Handler.HandleRequest(state, req)
 	if err != nil {
 		h.Error(w, r, err)
 		return

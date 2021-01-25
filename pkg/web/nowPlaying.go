@@ -6,20 +6,35 @@ import (
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
-// NowPlayingDecoder decodes a request for the home page
-func NowPlayingDecoder(r *http.Request) (Request, error) {
-	return emptyRequest{}, nil
+var NowPlayingHandler nowPlayingHandler
+
+type nowPlayingHandler struct{}
+
+func (nowPlayingHandler) handleNowPlaying(s State, r nowPlayingRequest) (State, nowPlayingResponse, error) {
+	return s, nowPlayingResponse{
+		NowPlaying: s.NowPlaying,
+	}, nil
 }
+
+func (nowPlayingHandler) DecodeRequest(r *http.Request) (Request, error) {
+	return nowPlayingRequest{}, nil
+}
+
+func (h nowPlayingHandler) HandleRequest(s State, r Request) (State, Response, error) {
+	req, ok := r.(nowPlayingRequest)
+	if !ok {
+		return withError(s, errWrongRequestType{})
+	}
+
+	return h.handleNowPlaying(s, req)
+}
+
+type nowPlayingRequest struct{}
+
+func (nowPlayingRequest) FlaggedAsRequest() {}
 
 type nowPlayingResponse struct {
 	NowPlaying speeldoos.Performance
 }
 
 func (nowPlayingResponse) FlaggedAsResponse() {}
-
-// NowPlayingHandler handles requests for the home page
-func NowPlayingHandler(s State, _ Request) (State, Response, error) {
-	return s, nowPlayingResponse{
-		NowPlaying: s.NowPlaying,
-	}, nil
-}
