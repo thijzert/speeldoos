@@ -6,6 +6,7 @@ if ( document.readyState == "loading" ) {
 }
 
 import { homeMain } from "./pages/home.js";
+import { statusMain } from "./pages/status.js";
 
 console.log("boot POST");
 
@@ -16,6 +17,8 @@ function main() {
 		let c = ndMain.classList;
 		if ( c.contains("home") ) {
 			homeMain();
+		} else if ( c.contains("status") ) {
+			statusMain();
 		}
 	}
 }

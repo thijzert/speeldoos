@@ -24,7 +24,6 @@ func (h homeHandler) HandleRequest(s State, r Request) (State, Response, error) 
 }
 
 type homeRequest struct {
-	Path string
 }
 
 func (homeRequest) FlaggedAsRequest() {}

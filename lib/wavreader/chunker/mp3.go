@@ -96,6 +96,10 @@ func (m *mp3Chunker) NewStream() (ChunkStream, error) {
 	return m.chcont.NewStream()
 }
 
+func (m *mp3Chunker) BufferStatus() BufferStatus {
+	return m.chcont.BufferStatus()
+}
+
 func (m *mp3Chunker) splitChunks() {
 	var hdr, nexthdr mp3header
 	buf := make([]byte, 1024)

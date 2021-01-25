@@ -37,6 +37,9 @@ func New(config ServerConfig) (*Server, error) {
 	}
 
 	s.mux.Handle("/", s.HTMLFunc(web.HomeHandler, "full/home"))
+	s.mux.Handle("/status", s.HTMLFunc(web.StatusHandler, "full/status"))
+
+	s.mux.Handle("/api/status/buffers", s.JSONFunc(web.BufferStatusHandler))
 
 	s.mux.Handle("/now-playing", s.HTMLFunc(web.NowPlayingHandler, "fragment/nowPlaying"))
 
@@ -57,10 +60,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getState() web.State {
-	return web.State{
+	rv := web.State{
 		Library:    s.config.Library,
 		NowPlaying: s.nowPlaying,
 	}
+	if st, ok := s.chunker.(chunker.Statuser); ok {
+		rv.Buffers.MP3Stream = st
+	}
+	return rv
 }
 
 // setState writes back any modified fields to the global state

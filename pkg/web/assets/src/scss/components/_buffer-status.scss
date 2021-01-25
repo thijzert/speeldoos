@@ -1,0 +1,38 @@
+
+.buffer-status {
+	.-buffer {
+		position: relative;
+		display: flex;
+
+		padding: 0.5rem 0;
+
+		.-now {
+			position: absolute;
+			top: 0.25rem;
+			height: 1.75rem;
+			border-left: 1px solid;
+			@include border-colour(ui-accent-main);
+		}
+
+		.-the-rest {
+			.-bar {
+				height: 1.25rem;
+
+				.-past {
+					@include background-colour(ui-alt);
+				}
+				.-future {
+					@include background-colour(ui-alt-act);
+				}
+			}
+
+			> * {
+				display: flex;
+			}
+			.-future {
+				text-align: right;
+			}
+		}
+	}
+}
+

@@ -20,6 +20,27 @@ type ChunkStream interface {
 	io.Reader
 }
 
+type BufferStatus struct {
+	// Tmin and Tmax denote the lowest and highest wall clock time in the buffer
+	Tmin, Tmax time.Time
+
+	// Tahead is the length of the buffer (in milliseconds) added but not yet available for reading
+	Tahead float32
+
+	// Tbehind is the length of the buffer (in milliseconds) available for reading as of the current time
+	Tbehind float32
+
+	// BufferSize is the size (in bytes) added but not yet available for reading
+	BufferSize int
+
+	// TotalSize is the total size (in bytes) of the buffer
+	TotalSize int
+}
+
+type Statuser interface {
+	BufferStatus() BufferStatus
+}
+
 type chunk struct {
 	contents []byte
 	embargo  time.Time
@@ -66,7 +87,7 @@ func (chcont *chunkContainer) AddChunk(buf []byte, embargo time.Time) {
 	l := len(chcont.chunks)
 	next := chcont.end
 	chcont.end = (next + 1 + 2*l) % l
-	if next < chcont.start || next + 5 > l {
+	if next < chcont.start || next+5 > l {
 		chcont.start = (next + 5 + 2*l) % l
 	}
 	chcont.chunks[next].embargo = embargo
@@ -74,6 +95,48 @@ func (chcont *chunkContainer) AddChunk(buf []byte, embargo time.Time) {
 	chcont.chunks[next].seqno = chcont.seqno
 	chcont.seqno++
 	chcont.mu.Unlock()
+}
+
+func (chcont *chunkContainer) BufferStatus() BufferStatus {
+	var rv BufferStatus
+
+	chcont.mu.RLock()
+	defer chcont.mu.RUnlock()
+
+	nowish := time.Now()
+
+	appendChunkStatus := func(i int) {
+		chunk := chcont.chunks[i]
+
+		if rv.Tmin.IsZero() {
+			rv.Tmin = chunk.embargo
+		}
+
+		if nowish.After(chunk.embargo) {
+			rv.BufferSize += len(chunk.contents)
+		}
+		rv.TotalSize += len(chunk.contents)
+
+		rv.Tmax = chunk.embargo
+	}
+
+	if chcont.start < chcont.end {
+		for i := chcont.start; i < chcont.end; i++ {
+			appendChunkStatus(i)
+		}
+	} else {
+		for i := chcont.start; i < len(chcont.chunks); i++ {
+			appendChunkStatus(i)
+		}
+		for i := 0; i < chcont.end; i++ {
+			appendChunkStatus(i)
+		}
+	}
+
+	rv.Tbehind = float32(1000.0 * nowish.Sub(rv.Tmin).Seconds())
+	rv.Tahead = float32(1000.0 * rv.Tmax.Sub(nowish).Seconds())
+
+	return rv
 }
 
 type chunkReader struct {

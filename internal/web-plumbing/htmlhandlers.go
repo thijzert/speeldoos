@@ -89,8 +89,13 @@ func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Response:      resp,
 	}
 
-	if _, err := getAsset(path.Join("dist", "css", "pages", h.TemplateName+".css")); err == nil {
-		tpData.PageCSS = h.TemplateName
+	cssTemplate := h.TemplateName
+	if len(cssTemplate) > 5 && cssTemplate[0:5] == "full/" {
+		cssTemplate = cssTemplate[5:]
+	}
+
+	if _, err := getAsset(path.Join("dist", "css", "pages", cssTemplate+".css")); err == nil {
+		tpData.PageCSS = cssTemplate
 	}
 
 	var b bytes.Buffer

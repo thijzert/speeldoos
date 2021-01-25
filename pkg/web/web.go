@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 
+	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
@@ -10,6 +11,9 @@ import (
 type State struct {
 	Library    *speeldoos.Library
 	NowPlaying speeldoos.Performance
+	Buffers    struct {
+		MP3Stream chunker.Statuser
+	}
 }
 
 var (

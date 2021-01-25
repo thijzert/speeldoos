@@ -104,4 +104,7 @@ func TestMP3Splitting(t *testing.T) {
 	if dur < (2*time.Minute+9*time.Second) || dur > (2*time.Minute+11*time.Second) {
 		t.Errorf("Observed song duration: %s; should be: 2m10s", dur)
 	}
+
+	var stat Statuser = rv
+	stat.BufferStatus()
 }
