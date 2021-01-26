@@ -11,6 +11,7 @@ import (
 type State struct {
 	Library    *speeldoos.Library
 	NowPlaying speeldoos.Performance
+	Stream     chunker.Chunker
 	Buffers    struct {
 		MP3Stream chunker.Statuser
 	}

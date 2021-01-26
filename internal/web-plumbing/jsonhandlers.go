@@ -24,9 +24,6 @@ func (s *Server) JSONFunc(handler web.Handler) http.Handler {
 }
 
 func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header()["Content-Type"] = []string{"application/json"}
-	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
-
 	req, err := h.Handler.DecodeRequest(r)
 	if err != nil {
 		h.Error(w, r, err)
@@ -46,6 +43,15 @@ func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Alternative path: this response can write its own headers and response body
+	if h, ok := resp.(http.Handler); ok {
+		h.ServeHTTP(w, r)
+		return
+	}
+
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
+
 	var b bytes.Buffer
 	e := json.NewEncoder(&b)
 	err = e.Encode(resp)
@@ -58,7 +64,12 @@ func (h jsonHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (jsonHandler) Error(w http.ResponseWriter, r *http.Request, err error) {
+
+	w.Header()["Content-Type"] = []string{"application/json"}
+	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
+
 	// TODO: we may need to set a different status entirely
+
 	w.WriteHeader(500)
 	errorResponse := struct {
 		errorCode    int

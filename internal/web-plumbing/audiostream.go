@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"log"
-	"net/http"
 
 	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader"
@@ -69,18 +68,4 @@ func (s *Server) initAudioStream() error {
 	}()
 
 	return nil
-}
-
-func (s *Server) asyncStreamHandler(w http.ResponseWriter, r *http.Request) {
-	cs, err := s.chunker.NewStream()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	w.Header().Set("Content-Type", "audio/mpeg")
-	_, err = io.Copy(w, cs)
-	if err != nil {
-		log.Print(err)
-		return
-	}
 }

@@ -41,10 +41,10 @@ func New(config ServerConfig) (*Server, error) {
 
 	s.mux.Handle("/api/status/buffers", s.JSONFunc(web.BufferStatusHandler))
 
+	s.mux.Handle("/stream.mp3", s.JSONFunc(web.AudioStreamHandler))
 	s.mux.Handle("/now-playing", s.HTMLFunc(web.NowPlayingHandler, "fragment/nowPlaying"))
 
 	s.mux.HandleFunc("/assets/", s.serveStaticAsset)
-	s.mux.HandleFunc("/stream.mp3", s.asyncStreamHandler)
 
 	return s, nil
 }
@@ -63,6 +63,7 @@ func (s *Server) getState() web.State {
 	rv := web.State{
 		Library:    s.config.Library,
 		NowPlaying: s.nowPlaying,
+		Stream:     s.chunker,
 	}
 	if st, ok := s.chunker.(chunker.Statuser); ok {
 		rv.Buffers.MP3Stream = st
