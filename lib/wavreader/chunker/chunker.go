@@ -13,6 +13,7 @@ import (
 type Chunker interface {
 	wavreader.Writer
 	NewStream() (ChunkStream, error)
+	NewStreamWithOffset(time.Duration) (ChunkStream, error)
 }
 
 // A ChunkStream wraps a single read session initiated from a Chunker
@@ -56,6 +57,10 @@ type chunkContainer struct {
 }
 
 func (chcont *chunkContainer) NewStream() (ChunkStream, error) {
+	return chcont.NewStreamWithOffset(0)
+}
+
+func (chcont *chunkContainer) NewStreamWithOffset(offset time.Duration) (ChunkStream, error) {
 	if chcont.errorState != nil {
 		return nil, chcont.errorState
 	}
@@ -76,6 +81,7 @@ func (chcont *chunkContainer) NewStream() (ChunkStream, error) {
 		parent:  chcont,
 		current: start,
 		seqno:   chcont.chunks[start].seqno,
+		offset:  offset,
 	}, nil
 }
 
@@ -146,10 +152,11 @@ type chunkReader struct {
 	buf      []byte
 	bufindex int
 	seqno    uint32
+	offset   time.Duration
 }
 
 func (ch *chunkReader) readBuffer(b []byte) (n int) {
-	for time.Now().Before(ch.embargo) {
+	for time.Now().Add(ch.offset).Before(ch.embargo) {
 		time.Sleep(1 * time.Millisecond)
 	}
 

@@ -96,6 +96,10 @@ func (m *mp3Chunker) NewStream() (ChunkStream, error) {
 	return m.chcont.NewStream()
 }
 
+func (m *mp3Chunker) NewStreamWithOffset(offset time.Duration) (ChunkStream, error) {
+	return m.chcont.NewStreamWithOffset(offset)
+}
+
 func (m *mp3Chunker) BufferStatus() BufferStatus {
 	return m.chcont.BufferStatus()
 }
