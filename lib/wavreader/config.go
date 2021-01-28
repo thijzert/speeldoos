@@ -8,6 +8,11 @@ type StreamFormat struct {
 	Bits     int
 }
 
+// BytesPerSample returns the byte length of each complete sample
+func (f StreamFormat) BytesPerSample() int {
+	return (f.Channels*f.Bits + 7) / 8
+}
+
 var (
 	// CD is the format used on audio CD's
 	CD StreamFormat = StreamFormat{

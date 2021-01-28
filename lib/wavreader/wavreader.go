@@ -148,14 +148,14 @@ func (w *wavReader) Init() {
 	w.format.Bits = atoi(b[34:36])
 
 	bytesPerSecond := atoi(b[28:32])
-	expectedBytesPerSecond := (w.format.Channels*w.format.Rate*w.format.Bits + 7) / 8
+	expectedBytesPerSecond := w.format.BytesPerSample() * w.format.Rate
 	if bytesPerSecond != expectedBytesPerSecond {
 		w.errorState = errParse
 		return
 	}
 
 	bytesPerSample := atoi(b[32:34])
-	expectedBytesPerSample := (w.format.Channels*w.format.Bits + 7) / 8
+	expectedBytesPerSample := w.format.BytesPerSample()
 	if bytesPerSample != expectedBytesPerSample {
 		w.errorState = errParse
 		return
