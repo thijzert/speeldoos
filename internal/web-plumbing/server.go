@@ -1,6 +1,7 @@
 package plumbing
 
 import (
+	"context"
 	"html/template"
 	"net/http"
 
@@ -11,14 +12,17 @@ import (
 
 // A ServerConfig combines common options for running a HTTP frontend
 type ServerConfig struct {
+	Context      context.Context
 	Library      *speeldoos.Library
 	StreamConfig chunker.MP3ChunkConfig
 }
 
 // A Server wraps a HTTP frontend
 type Server struct {
+	context         context.Context
 	config          ServerConfig
 	mux             *http.ServeMux
+	scheduler       *speeldoos.Scheduler
 	chunker         chunker.Chunker
 	parsedTemplates map[string]*template.Template
 	nowPlaying      speeldoos.Performance
@@ -27,8 +31,9 @@ type Server struct {
 // New instantiates a new server instance
 func New(config ServerConfig) (*Server, error) {
 	s := &Server{
-		config: config,
-		mux:    http.NewServeMux(),
+		context: config.Context,
+		config:  config,
+		mux:     http.NewServeMux(),
 	}
 
 	err := s.initAudioStream()
@@ -67,6 +72,9 @@ func (s *Server) getState() web.State {
 	}
 	if st, ok := s.chunker.(chunker.Statuser); ok {
 		rv.Buffers.MP3Stream = st
+	}
+	if st, ok := s.scheduler.AudioStream.(chunker.Statuser); ok {
+		rv.Buffers.Scheduler = st
 	}
 	return rv
 }

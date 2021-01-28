@@ -13,6 +13,7 @@ type State struct {
 	NowPlaying speeldoos.Performance
 	Stream     chunker.Chunker
 	Buffers    struct {
+		Scheduler chunker.Statuser
 		MP3Stream chunker.Statuser
 	}
 }

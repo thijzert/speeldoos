@@ -1,12 +1,12 @@
 package plumbing
 
 import (
-	"errors"
 	"io"
 	"log"
+	"time"
 
-	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader"
+	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
@@ -16,55 +16,30 @@ type playlistItem struct {
 }
 
 func (s *Server) initAudioStream() error {
+	wc := chunker.WAVChunkConfig{
+		StreamFormat: s.config.StreamConfig.Audio.PlaybackFormat,
+	}
+
 	var err error
-	playlist := make(chan playlistItem)
 
-	pfii := make([]speeldoos.Performance, 0, 50)
-
-	for _, car := range s.config.Library.Carriers {
-		for _, pf := range car.Carrier.Performances {
-			pfii = append(pfii, pf)
-		}
+	s.scheduler, err = s.config.Library.NewScheduler(s.context, wc)
+	if err != nil {
+		log.Fatal(err)
 	}
-
-	if len(pfii) == 0 {
-		return errors.New("no performances found in your library")
-	}
-
-	go func() {
-		// Stopgap measure: stop after playing 10 performances.
-		for k := 0; k < 10; k++ {
-			i := rand.Intn(len(pfii))
-			w, err := s.config.Library.GetWAV(pfii[i])
-			if err != nil {
-				log.Printf("%v", err)
-				continue
-			}
-			playlist <- playlistItem{Performance: pfii[i], Wav: w}
-		}
-		close(playlist)
-	}()
 
 	s.chunker, err = s.config.StreamConfig.NewMP3()
 	if err != nil {
 		return err
 	}
 
+	stream, err := s.scheduler.AudioStream.NewStreamWithOffset(25 * time.Second)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func() {
-		defer s.chunker.Close()
-
-		for item := range playlist {
-			s.nowPlaying = item.Performance
-			log.Printf("Now playing: %s - %s", item.Performance.Work.Composer.Name, item.Performance.Work.Title[0].Title)
-			defer item.Wav.Close()
-
-			_, err = io.Copy(s.chunker, item.Wav)
-
-			if err != nil {
-				log.Print(err)
-				return
-			}
-		}
+		io.Copy(s.chunker, stream)
+		s.chunker.Close()
 	}()
 
 	return nil

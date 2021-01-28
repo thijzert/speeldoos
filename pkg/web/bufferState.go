@@ -19,6 +19,12 @@ func (bufferStatusHandler) handleBufferStatus(s State, r bufferStatusRequest) (S
 			rv.MP3Stream = &mp3Stream
 		}
 	}
+	if s.Buffers.Scheduler != nil {
+		sch := s.Buffers.Scheduler.BufferStatus()
+		if !sch.Tmin.IsZero() {
+			rv.Scheduler = &sch
+		}
+	}
 
 	return s, rv, nil
 }
@@ -43,6 +49,7 @@ func (bufferStatusRequest) FlaggedAsRequest() {}
 
 type bufferStatusResponse struct {
 	MP3Stream *chunker.BufferStatus
+	Scheduler *chunker.BufferStatus
 }
 
 func (bufferStatusResponse) FlaggedAsResponse() {}

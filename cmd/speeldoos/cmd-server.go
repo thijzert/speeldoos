@@ -18,12 +18,11 @@ func server_main(args []string) {
 	log.Printf("Starting server...")
 
 	mc := chunker.MP3ChunkConfig{
-		Context: context.Background(),
 		Audio: wavreader.Config{
 			LamePath:       Config.Tools.Lame,
 			MaxBitrate:     Config.Server.Encoder.MaxBitrate,
 			VBRQuality:     Config.Server.Encoder.VBRQuality,
-			PlaybackFormat: wavreader.DAT,
+			PlaybackFormat: Config.WAVConf.PlaybackFormat,
 		},
 	}
 
@@ -32,6 +31,7 @@ func server_main(args []string) {
 	l.Refresh()
 
 	conf := plumbing.ServerConfig{
+		Context:      context.Background(),
 		Library:      l,
 		StreamConfig: mc,
 	}
