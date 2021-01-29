@@ -42,6 +42,21 @@ type Statuser interface {
 	BufferStatus() BufferStatus
 }
 
+type timeSource interface {
+	Now() time.Time
+	Sleep()
+}
+
+type defaultTimeSource struct{}
+
+func (defaultTimeSource) Now() time.Time {
+	return time.Now()
+}
+
+func (defaultTimeSource) Sleep() {
+	time.Sleep(1 * time.Millisecond)
+}
+
 type chunk struct {
 	contents []byte
 	embargo  time.Time
@@ -61,6 +76,10 @@ func (chcont *chunkContainer) NewStream() (ChunkStream, error) {
 }
 
 func (chcont *chunkContainer) NewStreamWithOffset(offset time.Duration) (ChunkStream, error) {
+	return chcont.newChunkStream(defaultTimeSource{}, offset)
+}
+
+func (chcont *chunkContainer) newChunkStream(ts timeSource, offset time.Duration) (ChunkStream, error) {
 	if chcont.errorState != nil {
 		return nil, chcont.errorState
 	}
@@ -68,7 +87,7 @@ func (chcont *chunkContainer) NewStreamWithOffset(offset time.Duration) (ChunkSt
 	chcont.mu.RLock()
 	defer chcont.mu.RUnlock()
 
-	now := time.Now()
+	now := ts.Now()
 	start := chcont.start
 	for start != chcont.end {
 		if chcont.chunks[start].embargo.Before(now) {
@@ -78,10 +97,11 @@ func (chcont *chunkContainer) NewStreamWithOffset(offset time.Duration) (ChunkSt
 	}
 
 	return &chunkReader{
-		parent:  chcont,
-		current: start,
-		seqno:   chcont.chunks[start].seqno,
-		offset:  offset,
+		parent:     chcont,
+		current:    start,
+		seqno:      chcont.chunks[start].seqno,
+		timeSource: ts,
+		offset:     offset,
 	}, nil
 }
 
@@ -146,18 +166,19 @@ func (chcont *chunkContainer) BufferStatus() BufferStatus {
 }
 
 type chunkReader struct {
-	parent   *chunkContainer
-	current  int
-	embargo  time.Time
-	buf      []byte
-	bufindex int
-	seqno    uint32
-	offset   time.Duration
+	parent     *chunkContainer
+	current    int
+	embargo    time.Time
+	buf        []byte
+	bufindex   int
+	seqno      uint32
+	timeSource timeSource
+	offset     time.Duration
 }
 
 func (ch *chunkReader) readBuffer(b []byte) (n int) {
-	for time.Now().Add(ch.offset).Before(ch.embargo) {
-		time.Sleep(1 * time.Millisecond)
+	for ch.timeSource.Now().Add(ch.offset).Before(ch.embargo) {
+		ch.timeSource.Sleep()
 	}
 
 	if ch.buf == nil || len(ch.buf)-ch.bufindex <= 0 {
@@ -229,7 +250,7 @@ func (ch *chunkReader) Read(b []byte) (n int, err error) {
 		}
 
 		// HACK: the writer isn't ready yet, but we want to avoid effectively spinlooping
-		time.Sleep(1 * time.Millisecond)
+		ch.timeSource.Sleep()
 		return 0, nil
 	}
 
