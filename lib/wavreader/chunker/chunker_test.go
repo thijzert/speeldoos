@@ -1,10 +1,9 @@
 package chunker
 
 import (
-	"testing"
-
 	"io"
 	"io/ioutil"
+	"testing"
 	"time"
 )
 
@@ -31,10 +30,9 @@ func getInputSignal(n, l int, now time.Time) *chunkContainer {
 	}
 
 	m := &chunkContainer{
-		chunks:     make([]chunk, n+2),
-		start:      0,
-		end:        n,
-		errorState: io.EOF,
+		chunks: make([]chunk, n+2),
+		start:  0,
+		end:    n,
 	}
 	for i := 0; i < n; i++ {
 		m.chunks[i].contents = buf[l*i : l*(i+1)]
@@ -48,6 +46,7 @@ func getInputSignal(n, l int, now time.Time) *chunkContainer {
 func TestReadAll(t *testing.T) {
 	now := time.Now()
 	m := getInputSignal(60, 1, now)
+	m.errorState = io.EOF
 
 	chm := &chunkReader{
 		parent:  m,
@@ -109,6 +108,34 @@ func TestEmbargo(t *testing.T) {
 			t.Error(err)
 		} else if !clock.Slept {
 			t.Logf("T+%d: still reading without sleeping", i)
+			t.Fail()
+		}
+	}
+}
+
+func TestStartPoint(t *testing.T) {
+	n := 60
+	now := time.Now()
+	m := getInputSignal(n, 1, now)
+
+	for i := 0; i < n; i++ {
+		clock := &dummyTime{
+			T: now.Add(time.Duration(int64(i-n))*time.Second + 5*time.Millisecond),
+		}
+
+		rd, err := m.newChunkStream(clock, 0)
+		if err != nil {
+			t.Error(err)
+		}
+		chm, ok := rd.(*chunkReader)
+		if !ok {
+			t.Logf("Chunk reader is of type %T", rd)
+			t.Fail()
+			continue
+		}
+
+		if chm.current != i {
+			t.Logf("T+%d: next block is %d", i, chm.current)
 			t.Fail()
 		}
 	}

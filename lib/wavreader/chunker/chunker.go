@@ -89,11 +89,13 @@ func (chcont *chunkContainer) newChunkStream(ts timeSource, offset time.Duration
 
 	now := ts.Now()
 	start := chcont.start
-	for start != chcont.end {
-		if chcont.chunks[start].embargo.Before(now) {
+	next := chcont.start
+	for next != chcont.end {
+		if chcont.chunks[next].embargo.After(now) {
 			break
 		}
-		start = (start + 1) % len(chcont.chunks)
+		start = next
+		next = (next + 1) % len(chcont.chunks)
 	}
 
 	return &chunkReader{
