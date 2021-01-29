@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"time"
 
 	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
@@ -30,7 +31,7 @@ func play_main(args []string) {
 	}
 	defer output.Close()
 
-	stream, err := sch.AudioStream.NewStream()
+	stream, err := sch.AudioStream.NewStreamWithOffset(15 * time.Millisecond)
 	if err != nil {
 		log.Fatal(err)
 	}
