@@ -65,7 +65,6 @@ func (s *Scheduler) NextPerformance() Performance {
 		log.Fatal("No performances found in your library.")
 	}
 
-	log.Printf("found %d performances in your library", len(pfii))
 	i := rand.Intn(len(pfii))
 
 	return pfii[i]
