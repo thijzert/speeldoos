@@ -3,10 +3,10 @@ package wavreader
 import "testing"
 
 func TestAtoI(t *testing.T) {
-	b := []byte{1, 0, 0, 128}
-	tatoi(t, b[2:4], 1<<15)
-	tatoi(t, b[1:4], 1<<23)
-	tatoi(t, b, 1<<31+1)
+	b := []byte{1, 0, 0, 64}
+	tatoi(t, b[2:4], 1<<14)
+	tatoi(t, b[1:4], 1<<22)
+	tatoi(t, b, 1<<30+1)
 }
 
 func tatoi(t *testing.T, buf []byte, exp int) {
