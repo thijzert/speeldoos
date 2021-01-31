@@ -22,10 +22,12 @@ func (s *Server) initAudioStream() error {
 
 	var err error
 
-	s.scheduler, err = s.config.Library.NewScheduler(s.context, wc)
+	s.scheduler, err = s.config.Library.NewScheduler(wc)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go s.scheduler.Run(s.context)
 
 	s.chunker, err = s.config.StreamConfig.NewMP3()
 	if err != nil {

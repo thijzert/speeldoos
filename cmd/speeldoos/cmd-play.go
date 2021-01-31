@@ -20,10 +20,13 @@ func play_main(args []string) {
 		StreamFormat: Config.WAVConf.PlaybackFormat,
 	}
 
-	sch, err := l.NewScheduler(context.Background(), wc)
+	sch, err := l.NewScheduler(wc)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	ctx := context.Background()
+	go sch.Run(ctx)
 
 	output, err := Config.WAVConf.AudioOutput()
 	if err != nil {

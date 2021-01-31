@@ -10,15 +10,13 @@ import (
 )
 
 type Scheduler struct {
-	Context     context.Context
 	Library     *Library
 	AudioStream chunker.Chunker
 }
 
-func (l *Library) NewScheduler(ctx context.Context, wc chunker.WAVChunkConfig) (*Scheduler, error) {
+func (l *Library) NewScheduler(wc chunker.WAVChunkConfig) (*Scheduler, error) {
 	var err error
 	rv := &Scheduler{
-		Context: ctx,
 		Library: l,
 	}
 
@@ -27,13 +25,11 @@ func (l *Library) NewScheduler(ctx context.Context, wc chunker.WAVChunkConfig) (
 		return nil, err
 	}
 
-	go rv.run()
-
 	return rv, nil
 }
 
-func (s *Scheduler) run() {
-	for s.Context.Err() == nil {
+func (s *Scheduler) Run(ctx context.Context) {
+	for ctx.Err() == nil {
 		performance := s.NextPerformance()
 
 		w, err := s.Library.GetWAV(performance)
