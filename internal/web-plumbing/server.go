@@ -66,15 +66,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getState() web.State {
 	rv := web.State{
-		Library:    s.config.Library,
-		NowPlaying: s.nowPlaying,
-		Stream:     s.chunker,
+		Library: s.config.Library,
+		Stream:  s.chunker,
 	}
 	if st, ok := s.chunker.(chunker.Statuser); ok {
 		rv.Buffers.MP3Stream = st
 	}
 	if st, ok := s.scheduler.AudioStream.(chunker.Statuser); ok {
 		rv.Buffers.Scheduler = st
+	}
+	if ad, err := s.scheduler.AudioStream.GetAssociatedData(); err == nil {
+		if pf, ok := ad.(speeldoos.Performance); ok {
+			rv.NowPlaying = pf
+		}
 	}
 	return rv
 }

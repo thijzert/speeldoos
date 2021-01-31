@@ -104,6 +104,14 @@ func (m *mp3Chunker) BufferStatus() BufferStatus {
 	return m.chcont.BufferStatus()
 }
 
+func (m *mp3Chunker) SetAssociatedData(data interface{}) {
+	m.chcont.SetAssociatedData(data)
+}
+
+func (m *mp3Chunker) GetAssociatedData() (interface{}, error) {
+	return m.chcont.GetAssociatedData()
+}
+
 func (m *mp3Chunker) splitChunks() {
 	var hdr, nexthdr mp3header
 	buf := make([]byte, 1024)

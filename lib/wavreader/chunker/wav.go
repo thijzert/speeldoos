@@ -146,3 +146,11 @@ func (m *wavChunker) NewStreamWithOffset(offset time.Duration) (ChunkStream, err
 func (m *wavChunker) BufferStatus() BufferStatus {
 	return m.chcont.BufferStatus()
 }
+
+func (m *wavChunker) SetAssociatedData(data interface{}) {
+	m.chcont.SetAssociatedData(data)
+}
+
+func (m *wavChunker) GetAssociatedData() (interface{}, error) {
+	return m.chcont.GetAssociatedData()
+}

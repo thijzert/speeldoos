@@ -38,7 +38,9 @@ func (s *Scheduler) Run(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("Now playing: %s - %s", performance.Work.Composer.Name, performance.Work.Title[0].Title)
+		s.AudioStream.SetAssociatedData(performance)
+		log.Printf("Queued: %s - %s", performance.Work.Composer.Name, performance.Work.Title[0].Title)
+
 		_, err = io.Copy(s.AudioStream, w)
 
 		if err != nil {
@@ -58,6 +60,7 @@ func (s *Scheduler) NextPerformance() Performance {
 	}
 
 	if len(pfii) == 0 {
+		// FIXME: handle this error properly
 		log.Fatal("No performances found in your library.")
 	}
 

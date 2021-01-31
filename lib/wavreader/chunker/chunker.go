@@ -14,6 +14,12 @@ type Chunker interface {
 	wavreader.Writer
 	NewStream() (ChunkStream, error)
 	NewStreamWithOffset(time.Duration) (ChunkStream, error)
+
+	// SetAssociatedData allows one to store arbitrary data at this time index
+	SetAssociatedData(interface{})
+
+	// GetAssociatedData retrieves the most recent data stored at or before the current time index
+	GetAssociatedData() (interface{}, error)
 }
 
 // A ChunkStream wraps a single read session initiated from a Chunker
@@ -58,17 +64,19 @@ func (defaultTimeSource) Sleep() {
 }
 
 type chunk struct {
-	contents []byte
-	embargo  time.Time
-	seqno    uint32
+	contents       []byte
+	embargo        time.Time
+	seqno          uint32
+	associatedData interface{}
 }
 
 type chunkContainer struct {
-	mu         sync.RWMutex
-	errorState error
-	chunks     []chunk
-	start, end int
-	seqno      uint32
+	mu                       sync.RWMutex
+	errorState               error
+	chunks                   []chunk
+	start, end               int
+	seqno                    uint32
+	primordialAssociatedData interface{}
 }
 
 func (chcont *chunkContainer) NewStream() (ChunkStream, error) {
@@ -107,22 +115,65 @@ func (chcont *chunkContainer) newChunkStream(ts timeSource, offset time.Duration
 	}, nil
 }
 
+func (chcont *chunkContainer) SetAssociatedData(data interface{}) {
+	chcont.mu.Lock()
+	defer chcont.mu.Unlock()
+
+	chcont.chunks[chcont.end].associatedData = data
+}
+
+func (chcont *chunkContainer) GetAssociatedData() (interface{}, error) {
+	return chcont.associatedDataForTimeSource(defaultTimeSource{})
+}
+
+func (chcont *chunkContainer) associatedDataForTimeSource(ts timeSource) (interface{}, error) {
+	if chcont.errorState != nil {
+		return nil, chcont.errorState
+	}
+
+	chcont.mu.RLock()
+	defer chcont.mu.RUnlock()
+
+	rv := chcont.primordialAssociatedData
+
+	now := ts.Now()
+	next := chcont.start
+	for next != chcont.end {
+		if chcont.chunks[next].embargo.After(now) {
+			break
+		}
+		if chcont.chunks[next].associatedData != nil {
+			rv = chcont.chunks[next].associatedData
+		}
+		next = (next + 1) % len(chcont.chunks)
+	}
+
+	return rv, nil
+}
+
 func (chcont *chunkContainer) AddChunk(buf []byte, embargo time.Time) {
 	chbuf := make([]byte, len(buf))
 	copy(chbuf, buf)
 
 	chcont.mu.Lock()
+	defer chcont.mu.Unlock()
+
 	l := len(chcont.chunks)
 	next := chcont.end
 	chcont.end = (next + 1 + 2*l) % l
+	chcont.chunks[chcont.end].associatedData = nil
+
 	if next < chcont.start || next+5 > l {
+		if chcont.chunks[chcont.start].associatedData != nil {
+			chcont.primordialAssociatedData = chcont.chunks[chcont.start].associatedData
+		}
+
 		chcont.start = (next + 5 + 2*l) % l
 	}
 	chcont.chunks[next].embargo = embargo
 	chcont.chunks[next].contents = chbuf
 	chcont.chunks[next].seqno = chcont.seqno
 	chcont.seqno++
-	chcont.mu.Unlock()
 }
 
 func (chcont *chunkContainer) BufferStatus() BufferStatus {
@@ -168,14 +219,15 @@ func (chcont *chunkContainer) BufferStatus() BufferStatus {
 }
 
 type chunkReader struct {
-	parent     *chunkContainer
-	current    int
-	embargo    time.Time
-	buf        []byte
-	bufindex   int
-	seqno      uint32
-	timeSource timeSource
-	offset     time.Duration
+	parent         *chunkContainer
+	current        int
+	embargo        time.Time
+	buf            []byte
+	bufindex       int
+	seqno          uint32
+	timeSource     timeSource
+	offset         time.Duration
+	associatedData interface{}
 }
 
 func (ch *chunkReader) readBuffer(b []byte) (n int) {
@@ -231,6 +283,11 @@ func (ch *chunkReader) getNext() (bool, error) {
 	ch.buf = make([]byte, len(cch.contents))
 	copy(ch.buf, cch.contents)
 	ch.bufindex = 0
+
+	if cch.associatedData != nil {
+		ch.associatedData = cch.associatedData
+	}
+
 	return true, nil
 }
 

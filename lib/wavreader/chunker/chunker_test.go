@@ -38,6 +38,7 @@ func getInputSignal(n, l int, now time.Time) *chunkContainer {
 		m.chunks[i].contents = buf[l*i : l*(i+1)]
 		m.chunks[i].embargo = now.Add(time.Duration(int64(i-n)) * time.Second)
 		m.chunks[i].seqno = uint32(i)
+		m.chunks[i].associatedData = i
 	}
 
 	return m
@@ -118,7 +119,7 @@ func TestStartPoint(t *testing.T) {
 	now := time.Now()
 	m := getInputSignal(n, 1, now)
 
-	for i := 0; i < n; i++ {
+	for i := 0; i < n-1; i++ {
 		clock := &dummyTime{
 			T: now.Add(time.Duration(int64(i-n))*time.Second + 5*time.Millisecond),
 		}
@@ -136,6 +137,36 @@ func TestStartPoint(t *testing.T) {
 
 		if chm.current != i {
 			t.Logf("T+%d: next block is %d", i, chm.current)
+			t.Fail()
+		}
+	}
+}
+
+func TestAssociatedData(t *testing.T) {
+	n := 60
+	now := time.Now()
+	m := getInputSignal(n, 1, now)
+
+	for i := 0; i < n-1; i++ {
+		clock := &dummyTime{
+			T: now.Add(time.Duration(int64(i-n))*time.Second + 5*time.Millisecond),
+		}
+
+		ad, err := m.associatedDataForTimeSource(clock)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
+
+		j, ok := ad.(int)
+		if !ok {
+			t.Logf("T+%d: associated data is of type %T", i, ad)
+			t.Fail()
+			continue
+		}
+
+		if j != i {
+			t.Logf("T+%d: associated data is %d", i, j)
 			t.Fail()
 		}
 	}
