@@ -51,6 +51,9 @@ func (audioStreamResponse) FlaggedAsResponse() {}
 
 func (a audioStreamResponse) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "audio/mpeg")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "Fri, 1 Apr 2005, 13:00:00 GMT")
 	_, err := io.Copy(w, a.Stream)
 	if err != nil {
 		log.Print(err)
