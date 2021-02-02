@@ -2,14 +2,25 @@
 {{ with $performance := .Response.NowPlaying }}
 
 <div class="performanceBlock">
-	<h2 class="-title">{{ (index $performance.Work.Title 0).Title }}</h2>
 	<h3 class="-composer">{{ $performance.Work.Composer.Name }}</h3>
-	{{ if gt ( len $performance.Work.OpusNumber ) 0 }}
+	<h2 class="-title">{{ (index $performance.Work.Title 0).Title }}</h2>
+	{{ if $performance.Work.OpusNumber }}
 		<ul>
 			{{ range $i, $opus := $performance.Work.OpusNumber }}
 				<li>{{ $opus }}</li>
 			{{ end }}
 		</ul>
+	{{ end }}
+	{{ if $performance.Work.Parts }}
+		<ol>
+			{{ range $i, $part := $performance.Work.Parts }}
+				{{ if $part.Number }}
+					<li number="{{ $part.Number }}">{{ $part.Part }}</li>
+				{{ else }}
+					<li>{{ $part.Part }}</li>
+				{{ end }}
+			{{ end }}
+		</ol>
 	{{ end }}
 	<ul class="-performers">
 		{{ range $i, $performer := $performance.Performers }}
