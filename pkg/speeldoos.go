@@ -7,6 +7,9 @@ import (
 	"os"
 )
 
+// PackageVersion contains the package version
+var PackageVersion string = "default version"
+
 // A Composer represents a composer
 type Composer struct {
 	Name string

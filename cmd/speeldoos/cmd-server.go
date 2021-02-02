@@ -15,6 +15,7 @@ import (
 var server_chunker chunker.Chunker
 
 func server_main(args []string) {
+	log.Printf("Speeldoos %v", speeldoos.PackageVersion)
 	log.Printf("Starting server...")
 
 	mc := chunker.MP3ChunkConfig{

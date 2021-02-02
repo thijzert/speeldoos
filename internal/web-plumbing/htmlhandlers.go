@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	weberrors "github.com/thijzert/speeldoos/internal/web-plumbing/errors"
+	speeldoos "github.com/thijzert/speeldoos/pkg"
 	"github.com/thijzert/speeldoos/pkg/web"
 )
 
@@ -77,12 +78,14 @@ func (h htmlHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header()["X-Content-Type-Options"] = []string{"nosniff"}
 
 	tpData := struct {
+		Version       string
 		AppRoot       string
 		AssetLocation string
 		PageCSS       string
 		Request       web.Request
 		Response      web.Response
 	}{
+		Version:       speeldoos.PackageVersion,
 		AppRoot:       h.appRoot(r),
 		AssetLocation: h.appRoot(r) + "assets",
 		Request:       req,

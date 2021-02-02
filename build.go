@@ -118,6 +118,12 @@ func compile(ctx context.Context, conf compileConfig) error {
 
 	os.Chdir("../../..")
 
+	gitDescCmd := exec.CommandContext(ctx, "git", "describe")
+	gitDescribe, err := gitDescCmd.Output()
+	if err != nil {
+		return errors.WithMessage(err, "error getting symbolic version")
+	}
+
 	// Build main executable
 	execOutput := "speeldoos"
 	if runtime.GOOS == "windows" || conf.GOOS == "windows" {
@@ -129,7 +135,9 @@ func compile(ctx context.Context, conf compileConfig) error {
 		return errors.WithMessage(err, "error: cannot find any go files to compile.")
 	}
 	compileArgs := append([]string{
-		"build", "-o", execOutput,
+		"build",
+		"-ldflags", "-X github.com/thijzert/speeldoos/pkg.PackageVersion=" + string(gitDescribe),
+		"-o", execOutput,
 	}, gofiles...)
 
 	compileCmd := exec.CommandContext(ctx, "go", compileArgs...)

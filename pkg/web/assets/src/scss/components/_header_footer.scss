@@ -19,3 +19,15 @@ nav.main-nav {
 		}
 	}
 }
+
+footer.powered-by {
+	padding: 4rem 0 6rem 0;
+	text-align: center;
+
+	@include text-colour( dark );
+
+	p {
+		margin: 0 0 1rem 0;
+	}
+}
+
