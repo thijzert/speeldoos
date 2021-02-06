@@ -46,7 +46,8 @@ func New(config ServerConfig) (*Server, error) {
 
 	s.mux.Handle("/api/status/buffers", s.JSONFunc(web.BufferStatusHandler))
 
-	s.mux.Handle("/stream.mp3", s.JSONFunc(web.AudioStreamHandler))
+	s.mux.Handle("/stream.mp3", s.JSONFunc(web.MP3StreamHandler))
+	s.mux.Handle("/stream.wav", s.JSONFunc(web.WAVStreamHandler))
 	s.mux.Handle("/now-playing", s.HTMLFunc(web.NowPlayingHandler, "fragment/nowPlaying"))
 
 	s.mux.HandleFunc("/assets/", s.serveStaticAsset)
@@ -66,8 +67,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getState() web.State {
 	rv := web.State{
-		Library: s.config.Library,
-		Stream:  s.chunker,
+		Library:   s.config.Library,
+		RawStream: s.scheduler.AudioStream,
+		MP3Stream: s.chunker,
 	}
 	if st, ok := s.chunker.(chunker.Statuser); ok {
 		rv.Buffers.MP3Stream = st
