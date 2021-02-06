@@ -1,11 +1,26 @@
 package wavreader
 
+import "fmt"
+
 // A StreamFormat wraps all options that define a PCM audio stream format
 type StreamFormat struct {
 	Format   int
 	Channels int
 	Rate     int
 	Bits     int
+}
+
+func (s StreamFormat) String() string {
+	if s.Format != 1 {
+		return fmt.Sprintf("PCM %dch %dHZ %dbit", s.Channels, s.Rate, s.Bits)
+	}
+
+	if s.Rate%1000 != 0 {
+		fr := float64(s.Rate) * 0.001
+		return fmt.Sprintf("PCM %dch %gkHZ %dbit", s.Channels, fr, s.Bits)
+	}
+
+	return fmt.Sprintf("PCM %dch %dkHZ %dbit", s.Channels, s.Rate/1000, s.Bits)
 }
 
 // BytesPerSample returns the byte length of each complete sample
