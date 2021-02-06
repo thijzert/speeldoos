@@ -21,7 +21,7 @@ type Writer interface {
 }
 
 type wavWriter struct {
-	target        io.WriteCloser
+	target        io.Writer
 	targetProcess *exec.Cmd
 	fixedSize     int
 	initialized   bool
@@ -31,7 +31,7 @@ type wavWriter struct {
 }
 
 // NewWriter instantiates a new Writer with the given audio stream format
-func NewWriter(target io.WriteCloser, format StreamFormat) Writer {
+func NewWriter(target io.Writer, format StreamFormat) Writer {
 	rv := &wavWriter{
 		target:      target,
 		initialized: false,
@@ -132,8 +132,8 @@ func (w *wavWriter) CloseWithError(er error) error {
 	var rv error
 	if pipe, ok := w.target.(*io.PipeWriter); ok {
 		rv = pipe.CloseWithError(er)
-	} else {
-		rv = w.target.Close()
+	} else if wc, ok := w.target.(io.WriteCloser); ok {
+		rv = wc.Close()
 	}
 
 	if w.targetProcess != nil {
