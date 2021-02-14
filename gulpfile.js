@@ -27,6 +27,7 @@ let postCssMqPacker = require("css-mqpacker");
 let postCssReporter = require("postcss-reporter");
 let postCssPxtorem  = require('postcss-pxtorem');
 let postCssSvg      = require("postcss-inline-svg");
+let postCssRange    = require("postcss-input-range");
 let webpackStream   = require('webpack-stream');
 let webpack         = require('webpack');
 let gulpif          = require('gulp-if');
@@ -151,6 +152,7 @@ function compileStyle()
 			propList: [ 'font', 'font-size', 'line-height', 'letter-spacing', 'min-width', 'max-width', 'width', 'height', 'padding*', 'margin*', 'padding', 'margin' ],
 			minPixelValue: 16
 		}),
+		postCssRange(),
 		postCssReporter({ clearReportedMessages: true })
 	]);
 

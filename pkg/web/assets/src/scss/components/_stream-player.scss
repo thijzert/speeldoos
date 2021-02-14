@@ -1,0 +1,101 @@
+
+.stream-player {
+	@include background-colour(ui-background);
+
+	$h: 4rem;
+	$play-width: 5.5rem;
+
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	border-radius: 0.75rem;
+	overflow: hidden;
+
+	width: min-content;
+
+	@include only-mobile() {
+		width: 100%;
+		.-stream-select {
+			width: calc( 100% - #{$play-width} );
+		}
+	}
+
+	&, div {
+		box-sizing: border-box;
+	}
+
+	.-top, .-bottom {
+		height: $h;
+		display: flex;
+		width: 100%;
+	}
+
+	.-playpause {
+		width: $play-width;
+
+		background-image: svg-load( "play.svg", fill=map-get( $colour-descriptors, ui-text ) );
+		background-repeat: no-repeat;
+		background-position: center;
+		background-size: 1.125rem;
+
+		cursor: pointer;
+		@include background-colour(ui-background);
+		&:hover {
+			@include background-colour(ui-background-act);
+		}
+
+		&.-playing {
+			background-image: svg-load( "pause.svg", fill=map-get( $colour-descriptors, ui-text ) );
+		}
+	}
+
+	.-stream-select {
+		display: flex;
+		// border-radius: 0.75rem;
+
+		.-src {
+			font-size: 0.875rem;
+			line-height: 1rem;
+			padding: 1.5rem 2rem;
+			text-align: center;
+
+			cursor: pointer;
+			@include background-colour(ui-background);
+
+			&:hover {
+				@include background-colour(ui-background-act);
+			}
+			&.-active {
+				@include background-colour(ui-main);
+
+				&:hover {
+					@include background-colour(ui-main-act);
+				}
+			}
+		}
+	}
+
+	.-volume-knob {
+		width: 100%;
+
+		input {
+			width: 100%;
+			box-sizing: border-box;
+			padding: 2rem 1.5rem;
+			height: $h;
+
+			background: none;
+			border: none;
+
+			&::range-track {
+				//background: map-get( $colour-descriptors, ui-main );
+
+				@include background-colour(ui-main);
+			}
+			&::range-lower {
+				//background: map-get( $colour-descriptors, ui-main-act );
+				@include background-colour(ui-main-act);
+			}
+		}
+	}
+}

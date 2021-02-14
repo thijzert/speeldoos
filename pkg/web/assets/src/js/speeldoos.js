@@ -5,14 +5,15 @@ if ( document.readyState == "loading" ) {
 	main();
 }
 
+import { streamPlayerMain } from "./components/stream-player.js";
+
 import { homeMain } from "./pages/home.js";
 import { statusMain } from "./pages/status.js";
 
-console.log("boot POST");
-
 function main() {
+	streamPlayerMain();
+
 	let ndMain = document.querySelector("main")
-	console.log("main", ndMain);
 	if ( ndMain ) {
 		let c = ndMain.classList;
 		if ( c.contains("home") ) {

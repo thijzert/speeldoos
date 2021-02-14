@@ -3,10 +3,7 @@
 <main class="home">
 	<section class="-now-playing -js-load-now-playing"></section>
 	<section class="-player">
-		<audio controls preload="none"><source src="{{.AppRoot}}stream.mp3" type="audio/mpeg" /></audio>
-	</section>
-	<section class="-player">
-		<audio controls preload="none"><source src="{{.AppRoot}}stream.wav" type="audio/wav" /></audio>
+		<div class="-js-create-stream-player"></div>
 	</section>
 </main>
 
