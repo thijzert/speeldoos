@@ -114,7 +114,7 @@ func (m *mp3Chunker) GetAssociatedData() (interface{}, error) {
 
 func (m *mp3Chunker) splitChunks() {
 	var hdr, nexthdr mp3header
-	buf := make([]byte, 1024)
+	buf := make([]byte, 4096)
 	firstOffset := 0
 	offset := 0
 
