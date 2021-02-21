@@ -22,10 +22,11 @@ import (
 type job func(ctx context.Context) error
 
 type compileConfig struct {
-	Development bool
-	Quick       bool
-	GOOS        string
-	GOARCH      string
+	Development    bool
+	Quick          bool
+	GOOS           string
+	GOARCH         string
+	PackageVersion string
 }
 
 func main() {
@@ -40,6 +41,7 @@ func main() {
 	flag.BoolVar(&conf.Quick, "quick", false, "Create a development build")
 	flag.StringVar(&conf.GOARCH, "GOARCH", "", "Cross-compile for architecture")
 	flag.StringVar(&conf.GOOS, "GOOS", "", "Cross-compile for operating system")
+	flag.StringVar(&conf.PackageVersion, "version", "", "Override embedded version number")
 	flag.BoolVar(&watch, "watch", false, "Watch source tree for changes")
 	flag.BoolVar(&run, "run", false, "Run speeldoos upon successful compilation")
 	flag.Parse()
@@ -118,10 +120,14 @@ func compile(ctx context.Context, conf compileConfig) error {
 
 	os.Chdir("../../..")
 
-	gitDescCmd := exec.CommandContext(ctx, "git", "describe")
-	gitDescribe, err := gitDescCmd.Output()
-	if err != nil {
-		return errors.WithMessage(err, "error getting symbolic version")
+	if conf.PackageVersion == "" {
+		gitDescCmd := exec.CommandContext(ctx, "git", "describe")
+		gitDescribe, err := gitDescCmd.Output()
+		if err != nil {
+			conf.PackageVersion = "default version"
+		} else {
+			conf.PackageVersion = string(gitDescribe)
+		}
 	}
 
 	// Build main executable
@@ -136,7 +142,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 	}
 	compileArgs := append([]string{
 		"build",
-		"-ldflags", "-X github.com/thijzert/speeldoos/pkg.PackageVersion=" + string(gitDescribe),
+		"-ldflags", "-X github.com/thijzert/speeldoos/pkg.PackageVersion=" + conf.PackageVersion,
 		"-o", execOutput,
 	}, gofiles...)
 
