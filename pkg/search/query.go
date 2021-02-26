@@ -400,12 +400,17 @@ func (n andNode) GetResult(perf speeldoos.Performance) Result {
 	return rv
 }
 
-func And(a, b Query) Query {
+func And(a Query, bs ...Query) Query {
+	rm := andNode{
+		Parts: []resulterer{a.rootMatcher},
+	}
+	for _, b := range bs {
+		rm.Parts = append(rm.Parts, b.rootMatcher)
+	}
+
 	return Query{
 		MinimalRelevance: a.MinimalRelevance,
-		rootMatcher: andNode{
-			Parts: []resulterer{a.rootMatcher, b.rootMatcher},
-		},
+		rootMatcher:      rm,
 	}
 }
 
@@ -441,11 +446,16 @@ func (n orNode) GetResult(perf speeldoos.Performance) Result {
 	return rv
 }
 
-func Or(a, b Query) Query {
+func Or(a Query, bs ...Query) Query {
+	rm := orNode{
+		Parts: []resulterer{a.rootMatcher},
+	}
+	for _, b := range bs {
+		rm.Parts = append(rm.Parts, b.rootMatcher)
+	}
+
 	return Query{
 		MinimalRelevance: a.MinimalRelevance,
-		rootMatcher: orNode{
-			Parts: []resulterer{a.rootMatcher, b.rootMatcher},
-		},
+		rootMatcher:      rm,
 	}
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	tc "github.com/thijzert/go-termcolours"
 	"github.com/thijzert/speeldoos/pkg/search"
@@ -10,19 +9,23 @@ import (
 
 func grep_main(args []string) {
 	var q search.Query
-	for i, s := range args {
+	var qparts []search.Query
+	for _, s := range args {
 		p, err := search.Compile(s)
 		if err != nil {
 			panic(err)
 		}
 
-		if i == 0 {
-			q = p
-		} else {
-			q = search.Or(q, p)
-		}
+		qparts = append(qparts, p)
 	}
-	log.Printf("%#v", q)
+
+	if len(qparts) == 0 {
+		panic("usage: speeldoos grep PATTERN")
+	} else if len(qparts) == 1 {
+		q = qparts[0]
+	} else {
+		q = search.And(qparts[0], qparts[1:]...)
+	}
 
 	lib, err := getLibrary()
 	if err != nil {
