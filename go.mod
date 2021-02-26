@@ -9,4 +9,5 @@ require (
 	github.com/thijzert/go-resemble v1.4.0
 	github.com/thijzert/go-termcolours v0.0.0-20171031170714-d434be3e67cd
 	golang.org/x/crypto v0.0.0-20201217014255-9d1352758620
+	golang.org/x/text v0.3.3
 )

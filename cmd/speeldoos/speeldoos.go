@@ -241,9 +241,17 @@ func main() {
 	}
 }
 
-func allCarriers() ([]speeldoos.ParsedCarrier, error) {
+func getLibrary() (*speeldoos.Library, error) {
 	l := speeldoos.NewLibrary(Config.LibraryDir)
 	er := l.Refresh()
+	if er != nil {
+		return nil, er
+	}
+	return l, nil
+}
+
+func allCarriers() ([]speeldoos.ParsedCarrier, error) {
+	l, er := getLibrary()
 	if er != nil {
 		return nil, er
 	}
@@ -251,8 +259,7 @@ func allCarriers() ([]speeldoos.ParsedCarrier, error) {
 }
 
 func allCarriersWithErrors() ([]speeldoos.ParsedCarrier, error) {
-	l := speeldoos.NewLibrary(Config.LibraryDir)
-	er := l.Refresh()
+	l, er := getLibrary()
 	if er != nil {
 		return nil, er
 	}
