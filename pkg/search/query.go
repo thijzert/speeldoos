@@ -249,6 +249,9 @@ func (n matcherNode) getWork(w speeldoos.Work) work {
 
 	rv.Composer.ID = w.Composer.ID
 	rv.Composer.Name = n.f.MatchString(w.Composer.Name)
+	if !rv.Composer.Name.IsEmpty() {
+		rv.Relevance.Match = 1.0 // TODO
+	}
 
 	for _, title := range w.Title {
 		mt := n.f.MatchString(title.Title)
