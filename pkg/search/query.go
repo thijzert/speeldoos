@@ -2,6 +2,7 @@ package search
 
 import (
 	"errors"
+	"math"
 	"regexp"
 	"sort"
 	"strings"
@@ -383,23 +384,24 @@ func (n andNode) GetResult(perf speeldoos.Performance) Result {
 		pr := part.GetResult(perf)
 		if i == 0 {
 			rv = pr
-			total.Match = pr.Relevance.Match
+			total.Match = pr.Relevance.Match * pr.Relevance.Match
 			total.Significance = pr.Relevance.Relevance()
 		} else {
 			rv = mergeResults(rv, pr)
-			total.Match += pr.Relevance.Match
+			total.Match += pr.Relevance.Match * pr.Relevance.Match
 			total.Significance += pr.Relevance.Relevance()
 		}
 	}
 
-	// if total.Match > 0 {
-	// 	total.Significance /= total.Match
-	// }
 	if len(n.Parts) > 0 {
 		total.Match /= float64(len(n.Parts))
 	}
-	rv.Relevance = total
+	if total.Match > 0 {
+		total.Match = math.Sqrt(total.Match)
+		total.Significance /= math.Sqrt(total.Match)
+	}
 
+	rv.Relevance = total
 	return rv
 }
 
@@ -441,9 +443,9 @@ func (n orNode) GetResult(perf speeldoos.Performance) Result {
 		}
 	}
 
-	//if total.Match > 0 {
-	//	total.Significance /= total.Match
-	//}
+	if total.Match > 0 {
+		total.Significance /= total.Match
+	}
 	rv.Relevance = total
 
 	return rv
