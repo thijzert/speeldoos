@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"unicode"
+	"unicode/utf8"
 
 	textsearch "golang.org/x/text/search"
 )
@@ -37,6 +39,42 @@ func (n textMatcher) MatchString(s string) MatchedString {
 	}
 
 	return rv
+}
+
+type wordMatcher struct {
+	Pattern *textsearch.Pattern
+}
+
+func (n wordMatcher) MatchString(s string) MatchedString {
+	rv := MatchedString{
+		base: s,
+	}
+
+	offset := 0
+	for offset < len(s) {
+		start, end := n.Pattern.IndexString(s[offset:], 0)
+		if start >= 0 {
+			prev, _ := utf8.DecodeLastRuneInString(s[:offset+start])
+			next, _ := utf8.DecodeRuneInString(s[offset+end:])
+
+			if n.notWord(prev) && n.notWord(next) {
+				rv.highlights = append(rv.highlights, interval{
+					start + offset,
+					end + offset,
+				})
+			}
+
+			offset += start + 1
+		} else {
+			break
+		}
+	}
+
+	return rv
+}
+
+func (n wordMatcher) notWord(r rune) bool {
+	return r == utf8.RuneError || unicode.IsSpace(r) || unicode.IsSymbol(r) || unicode.IsPunct(r)
 }
 
 type regexMatcher struct {

@@ -33,22 +33,20 @@ func (c Config) Compile(q string) (Query, error) {
 			continue
 		}
 
-		textm, err := c.newTextMatcher(queryPart)
+		qpm := orNode{}
+
+		textm, ww, err := c.newTextMatchers(queryPart)
 		if err != nil {
 			return Query{}, err
 		}
 
-		var qpm resulterer = matcherNode{textm}
+		qpm.Parts = append(qpm.Parts, matcherNode{textm}, matcherNode{ww})
+		qpm.Parts = append(qpm.Parts, matcherNode{ww})
 
 		if containsRegexChars.MatchString(queryPart) {
 			rexm, err := c.newRegexMatcher(queryPart)
 			if err == nil {
-				qpm = orNode{
-					Parts: []resulterer{
-						qpm,
-						matcherNode{rexm},
-					},
-				}
+				qpm.Parts = append(qpm.Parts, matcherNode{rexm})
 			}
 		}
 
@@ -65,9 +63,22 @@ func (c Config) Compile(q string) (Query, error) {
 	}, nil
 }
 
-func (c Config) newTextMatcher(s string) (textMatcher, error) {
-	var rv textMatcher
+func (c Config) newTextMatchers(s string) (textMatcher, wordMatcher, error) {
+	var tip textMatcher
+	var wholeWord wordMatcher
 
+	pat, err := c.newSearchPattern(s)
+	if err != nil {
+		return tip, wholeWord, err
+	}
+
+	tip.Pattern = pat
+	wholeWord.Pattern = pat
+
+	return tip, wholeWord, nil
+}
+
+func (c Config) newSearchPattern(s string) (*textsearch.Pattern, error) {
 	// Just combine all languages. What could possibly go wrong?
 	tag, err := language.Compose(
 		language.English,
@@ -141,7 +152,7 @@ func (c Config) newTextMatcher(s string) (textMatcher, error) {
 		language.Zulu,
 	)
 	if err != nil {
-		return rv, err
+		return nil, err
 	}
 
 	opts := []textsearch.Option{
@@ -154,12 +165,7 @@ func (c Config) newTextMatcher(s string) (textMatcher, error) {
 	}
 
 	matcher := textsearch.New(tag, opts...)
-
-	pat := matcher.CompileString(s)
-
-	rv.Pattern = pat
-
-	return rv, nil
+	return matcher.CompileString(s), nil
 }
 
 func (c Config) newRegexMatcher(s string) (regexMatcher, error) {

@@ -229,7 +229,7 @@ func TestRegexMatch(t *testing.T) {
 }
 
 func TestTextMatch(t *testing.T) {
-	pm, err := defaultConfig.newTextMatcher("dog")
+	pm, ww, err := defaultConfig.newTextMatchers("dog")
 	if err != nil {
 		t.Error(err)
 		return
@@ -254,6 +254,22 @@ func TestTextMatch(t *testing.T) {
 			{false, "doug's "},
 			{true, "dog"},
 			{false, " digs a hole"},
+		},
+	}
+	mw.Reset()
+	ms.Export(mw)
+	mw.AreWeThereYet()
+
+	ms = ww.MatchString("doug's dog digs a hole")
+	mw.Reset()
+	ms.Export(mw)
+	mw.AreWeThereYet()
+
+	ms = ww.MatchString("doug's dogs dug a hole while doug ate a hotdog")
+	mw = &expectExporter{
+		t: t,
+		contents: []expectedExport{
+			{false, "doug's dogs dug a hole while doug ate a hotdog"},
 		},
 	}
 	mw.Reset()
