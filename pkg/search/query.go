@@ -3,6 +3,7 @@ package search
 import (
 	"errors"
 	"regexp"
+	"sort"
 	"strings"
 
 	speeldoos "github.com/thijzert/speeldoos/pkg"
@@ -196,7 +197,7 @@ func Compile(q string) (Query, error) {
 }
 
 func (q Query) Search(lib *speeldoos.Library) []Result {
-	var rv []Result
+	var rv resultList
 
 	carriers := lib.AllCarriers()
 	for _, carrier := range carriers {
@@ -204,12 +205,14 @@ func (q Query) Search(lib *speeldoos.Library) []Result {
 			res := q.rootMatcher.GetResult(perf)
 
 			if res.Relevance.Relevance() >= q.MinimalRelevance {
-				rv = append(rv, res)
+				rv.Results = append(rv.Results, res)
 			}
 		}
 	}
 
-	return rv
+	sort.Sort(&rv)
+
+	return rv.Results
 }
 
 type matcherNode struct {

@@ -13,6 +13,26 @@ func (r Relevance) Relevance() float64 {
 	return r.Match * r.Significance
 }
 
+type resultList struct {
+	Results []Result
+}
+
+// Len is the number of elements in the collection.
+func (r *resultList) Len() int {
+	return len(r.Results)
+}
+
+// Less reports whether the element with index i
+// must sort before the element with index j.
+func (r *resultList) Less(i, j int) bool {
+	return r.Results[i].Relevance.Relevance() > r.Results[j].Relevance.Relevance()
+}
+
+// Swap swaps the elements with indexes i and j.
+func (r *resultList) Swap(i, j int) {
+	r.Results[i], r.Results[j] = r.Results[j], r.Results[i]
+}
+
 type Result struct {
 	Relevance Relevance
 
