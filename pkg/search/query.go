@@ -35,7 +35,7 @@ func (q Query) Search(lib *speeldoos.Library) []Result {
 		for _, perf := range carrier.Carrier.Performances {
 			res := q.rootMatcher.GetResult(perf)
 
-			if res.Relevance.Relevance() >= q.MinimalRelevance {
+			if res.Relevance.Match > 0 && res.Relevance.Relevance() >= q.MinimalRelevance {
 				rv.Results = append(rv.Results, res)
 			}
 		}
