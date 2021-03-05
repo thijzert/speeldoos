@@ -45,6 +45,7 @@ func New(config ServerConfig) (*Server, error) {
 	s.mux.Handle("/status", s.HTMLFunc(web.StatusHandler, "full/status"))
 
 	s.mux.Handle("/api/status/buffers", s.JSONFunc(web.BufferStatusHandler))
+	s.mux.Handle("/api/search", s.HTMLFunc(web.SearchResultHandler, "fragment/searchResult"))
 
 	s.mux.Handle("/stream.mp3", s.JSONFunc(web.MP3StreamHandler))
 	s.mux.Handle("/stream.wav", s.JSONFunc(web.WAVStreamHandler))

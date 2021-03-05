@@ -1,0 +1,43 @@
+
+{{ range $resultIndex, $result := .Response.Results }}
+
+<div class="result">
+	<div class="-match" style="width: {{ printf "%.4frem" (mulf 2 $result.Relevance.Match) }}; height: {{ printf "%.4frem" (mulf 0.5 $result.Relevance.Significance) }}" title="{{ printf "Match: %3.1f%%\n" (mulf 100 $result.Relevance.Match) }}{{ printf "Significance: %.1f\n" $result.Relevance.Significance }}{{ printf "Relevance: %.1f" $result.Relevance.Relevance }}"></div>
+	<h3 class="-composer">{{ highlight $result.Work.Composer.Name }}</h3>
+	{{ range $i, $title := $result.Work.Title }}
+		{{ if $i }}
+			<h2 class="-title -aka">{{ highlight $title }}</h2>
+		{{ else }}
+			<h2 class="-title">{{ highlight $title }}</h2>
+		{{ end }}
+	{{ end }}
+	{{ if $result.Work.OpusNumber }}
+		<ul>
+			{{ range $i, $opus := $result.Work.OpusNumber }}
+				<li>{{ highlight $opus }}</li>
+			{{ end }}
+		</ul>
+	{{ end }}
+	{{ if $result.Work.Parts }}
+		<ol>
+			{{ range $i, $part := $result.Work.Parts }}
+				{{ if $part.Number }}
+					<li number="{{ $part.Number }}">{{ highlight $part.Part }}</li>
+				{{ else }}
+					<li>{{ highlight $part.Part }}</li>
+				{{ end }}
+			{{ end }}
+		</ol>
+	{{ end }}
+	{{ range $i, $performance := $result.Performances }}
+		<div class="-performance">
+			<ul class="-performers">
+				{{ range $j, $performer := $performance.Performers }}
+					<li class="-{{ $performer.Role }}">{{ highlight $performer.Name }}</li>
+				{{ end }}
+			</ul>
+		</div>
+	{{ end }}
+</div>
+
+{{ end }}

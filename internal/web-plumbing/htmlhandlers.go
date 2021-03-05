@@ -11,6 +11,7 @@ import (
 
 	weberrors "github.com/thijzert/speeldoos/internal/web-plumbing/errors"
 	speeldoos "github.com/thijzert/speeldoos/pkg"
+	"github.com/thijzert/speeldoos/pkg/search"
 	"github.com/thijzert/speeldoos/pkg/web"
 )
 
@@ -128,7 +129,13 @@ func (s *Server) getTemplate(name string) (*template.Template, error) {
 		return nil, err
 	}
 
-	funcs := template.FuncMap{}
+	funcs := template.FuncMap{
+		"add":       templateAddi,
+		"mul":       templateMuli,
+		"addf":      templateAddf,
+		"mulf":      templateMulf,
+		"highlight": highlightSearch,
+	}
 
 	if name == "full/basePage" {
 		tp, err = template.New("basePage").Funcs(funcs).Parse(string(b))
@@ -159,6 +166,41 @@ func (s *Server) getTemplate(name string) (*template.Template, error) {
 
 	s.parsedTemplates[name] = tp
 	return tp, nil
+}
+
+func templateMuli(a, b int) int {
+	return a * b
+}
+func templateAddi(a, b int) int {
+	return a + b
+}
+func templateMulf(a, b float64) float64 {
+	return a * b
+}
+func templateAddf(a, b float64) float64 {
+	return a + b
+}
+
+type highlightStronger struct {
+	Content string
+}
+
+func (h *highlightStronger) WriteMatched(str string) {
+	h.Content += "<strong>" + template.HTMLEscapeString(str) + "</strong>"
+}
+func (h *highlightStronger) WriteUnmatched(str string) {
+	h.Content += template.HTMLEscapeString(str)
+}
+
+func highlightSearch(str fmt.Stringer) template.HTML {
+	if ms, ok := str.(search.MatchedString); ok {
+		rv := &highlightStronger{}
+		ms.Export(rv)
+		return template.HTML(rv.Content)
+	}
+
+	rv := template.HTMLEscapeString(str.String())
+	return template.HTML(rv)
 }
 
 // appRoot finds the relative path to the application root
