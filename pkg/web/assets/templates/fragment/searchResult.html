@@ -12,14 +12,14 @@
 		{{ end }}
 	{{ end }}
 	{{ if $result.Work.OpusNumber }}
-		<ul>
+		<ul class="-opusnumbers">
 			{{ range $i, $opus := $result.Work.OpusNumber }}
-				<li>{{ highlight $opus }}</li>
+				<li class="-opus">{{ highlight $opus }}</li>
 			{{ end }}
 		</ul>
 	{{ end }}
 	{{ if $result.Work.Parts }}
-		<ol>
+		<ol class="-parts">
 			{{ range $i, $part := $result.Work.Parts }}
 				{{ if $part.Number }}
 					<li number="{{ $part.Number }}">{{ highlight $part.Part }}</li>
@@ -30,7 +30,7 @@
 		</ol>
 	{{ end }}
 	{{ range $i, $performance := $result.Performances }}
-		<div class="-performance">
+		<div class="-performance" id="-perf-{{ $performance.ID }}">
 			<ul class="-performers">
 				{{ range $j, $performer := $performance.Performers }}
 					<li class="-{{ $performer.Role }}">{{ highlight $performer.Name }}</li>

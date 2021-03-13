@@ -123,7 +123,8 @@ func (n matcherNode) getPerformance(p speeldoos.Performance) performance {
 	var rv performance
 	rv.Relevance.Significance = 1.0 // TODO
 
-	rv.CarrierID = MatchedString{base: "FIXME"} // Carrier ID needs to be passed in with the speeldoos.Performance somehow
+	rv.ID = p.ID
+	rv.CarrierID = n.f.MatchString(p.ID.Carrier())
 	rv.Year = p.Year
 
 	for _, pf := range p.Performers {
@@ -182,9 +183,11 @@ func mergeResults(a, b Result) Result {
 			continue
 		}
 
+		// TODO: compare performance IDs to handle the case when they're in a different order, or don't have the same performances
 		bperf := b.Performances[j]
 
 		mperf := performance{
+			ID:        perf.ID,
 			CarrierID: perf.CarrierID.mustCombine(bperf.CarrierID),
 			Year:      perf.Year,
 		}

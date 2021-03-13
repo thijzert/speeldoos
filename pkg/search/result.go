@@ -1,5 +1,9 @@
 package search
 
+import (
+	speeldoos "github.com/thijzert/speeldoos/pkg"
+)
+
 type Relevance struct {
 	Match        float64
 	Significance float64
@@ -78,6 +82,7 @@ type performer struct {
 type performance struct {
 	Relevance Relevance
 
+	ID        speeldoos.PerformanceID
 	CarrierID MatchedString
 
 	// The year in which the performance took place
