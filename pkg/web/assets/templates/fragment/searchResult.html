@@ -30,7 +30,7 @@
 		</ol>
 	{{ end }}
 	{{ range $i, $performance := $result.Performances }}
-		<div class="-performance" id="-perf-{{ $performance.ID }}">
+		<div class="-performance" id="{{ $performance.ID }}">
 			<ul class="-performers">
 				{{ range $j, $performer := $performance.Performers }}
 					<li class="-{{ $performer.Role }}">{{ highlight $performer.Name }}</li>

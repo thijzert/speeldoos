@@ -53,16 +53,51 @@ export class SearchBox {
 
 		this._results.innerHTML = results;
 
-		let nresults = this._results.querySelectorAll(".result").length;
-		if ( nresults === 0 ) {
+		let nresults = this._results.querySelectorAll(".result");
+		if ( nresults.length === 0 ) {
 			this._noresults.style.display = "block";
 			this._resultCounter.style.display = "none";
 		} else {
-			this._resultCounter.innerHTML = `<strong>1</strong> <span>/</span> <strong>${nresults}</strong>`;
+			this._resultCounter.innerHTML = `<strong>1</strong> <span>/</span> <strong>${nresults.length}</strong>`;
 			this._noresults.style.display = "none";
 			this._resultCounter.style.display = "block";
 		}
+
+		nresults.forEach((nd) => {
+			nd.querySelectorAll(".-performance").forEach((ndpf) => {
+				if ( !ndpf.id ) {
+					return;
+				}
+
+				let p = document.createElement("DIV");
+				p.classList.add("-add-queue");
+				let btn = document.createElement("BUTTON");
+				btn.setAttribute("class", "tfbutton");
+				btn.onclick = btnAddToQueue(btn, ndpf.id);
+				btn.innerText = "add to queue"; // TODO: i18n
+				p.appendChild(btn);
+				ndpf.appendChild(p);
+			});
+		});
 	}
+}
+
+function btnAddToQueue(btn, pfid) {
+	return (async (e) => {
+		btn.disabled = true;
+		console.log("Add ", pfid, " to queue");
+
+		let u = new URL("/api/queue/add", document.baseURI);
+		var fd = new FormData()
+		fd.append( "id", pfid );
+		let resp = await fetch(u, {
+			method: "POST",
+			body: fd,
+		});
+		await resp.json();
+
+		btn.disabled = false;
+	});
 }
 
 export function searchBoxMain() {

@@ -11,9 +11,13 @@ import (
 type State struct {
 	Library    *speeldoos.Library
 	NowPlaying speeldoos.Performance
-	RawStream  chunker.Chunker
-	MP3Stream  chunker.Chunker
-	Buffers    struct {
+
+	PlayQueueDirty bool
+	PlayQueue      []speeldoos.PerformanceID
+
+	RawStream chunker.Chunker
+	MP3Stream chunker.Chunker
+	Buffers   struct {
 		Scheduler chunker.Statuser
 		MP3Stream chunker.Statuser
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"sync"
 
 	rand "github.com/thijzert/speeldoos/lib/properrandom"
 	"github.com/thijzert/speeldoos/lib/wavreader/chunker"
@@ -12,6 +13,9 @@ import (
 type Scheduler struct {
 	Library     *Library
 	AudioStream chunker.Chunker
+
+	QueueMutex sync.RWMutex
+	PlayQueue  []PerformanceID
 }
 
 func (l *Library) NewScheduler(wc chunker.WAVChunkConfig) (*Scheduler, error) {
@@ -51,6 +55,20 @@ func (s *Scheduler) Run(ctx context.Context) {
 }
 
 func (s *Scheduler) NextPerformance() Performance {
+	s.QueueMutex.Lock()
+	for len(s.PlayQueue) > 0 {
+		nextID := s.PlayQueue[0]
+		copy(s.PlayQueue, s.PlayQueue[1:])
+		s.PlayQueue = s.PlayQueue[:len(s.PlayQueue)-1]
+
+		rv, err := s.Library.GetPerformance(nextID)
+		if err == nil {
+			s.QueueMutex.Unlock()
+			return rv
+		}
+	}
+	s.QueueMutex.Unlock()
+
 	pfii := make([]Performance, 0, 50)
 
 	for _, car := range s.Library.Carriers {
