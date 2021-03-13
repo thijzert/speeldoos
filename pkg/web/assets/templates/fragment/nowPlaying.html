@@ -30,3 +30,33 @@
 </div>
 
 {{ end }}
+
+<div class="-up-next">
+
+
+
+	{{ range $_, $performance := .Response.UpNext }}
+	<div class="-item">
+		<span class="-composer">{{ $performance.Work.Composer.Name }}</span>
+		{{- " - " -}}
+		<span class="-title">{{ (index $performance.Work.Title 0).Title }}</span>
+
+		{{- " " -}}
+		<span class="-performers">
+			{{- "(" -}}
+			{{- if $performance.Year -}}
+				{{- $performance.Year -}}
+			{{- end -}}
+
+			{{- range $i, $performer := $performance.Performers -}}
+				{{- if or $i $performance.Year -}}
+					{{- ", " -}}
+				{{- end -}}
+
+				<span class="-{{ $performer.Role }}">{{ $performer.Name }}</span>
+			{{- end -}}
+			{{- ")" -}}
+		</span>
+	</div>
+	{{ end }}
+</div>
