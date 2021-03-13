@@ -1,6 +1,7 @@
 package pkg
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -82,7 +83,34 @@ func (l *Library) AllCarriers() []ParsedCarrier {
 	return rv
 }
 
-// GetWAV opens one performance in the library and return its raw audio data
+// GetPerformance finds a performance in the library by its ID
+func (l *Library) GetPerformance(id PerformanceID) (Performance, error) {
+	for _, pc := range l.Carriers {
+		if pc.Error != nil {
+			continue
+		}
+
+		for _, pf := range pc.Carrier.Performances {
+			if pf.ID == id {
+				return pf, nil
+			}
+		}
+	}
+
+	return Performance{}, errors.New("not found")
+}
+
+// GetWAVFromID opens the performance with this ID and returns its raw audio data
+func (l *Library) GetWAVFromID(id PerformanceID) (wavreader.Reader, error) {
+	pf, err := l.GetPerformance(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return l.GetWAV(pf)
+}
+
+// GetWAV opens one performance in the library and returns its raw audio data
 func (l *Library) GetWAV(pf Performance) (wavreader.Reader, error) {
 	var format wavreader.StreamFormat
 	bps := 0

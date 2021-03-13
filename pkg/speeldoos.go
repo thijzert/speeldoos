@@ -2,9 +2,11 @@ package pkg
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 // PackageVersion contains the package version
@@ -97,6 +99,9 @@ func (s SourceFile) String() string {
 
 // A Performance represents one (recording of a) performance of a Work.
 type Performance struct {
+	// The ID that uniquely identifies this performance in the library
+	ID PerformanceID `xml:"-"`
+
 	Work Work
 
 	// The year in which the performance took place
@@ -104,6 +109,40 @@ type Performance struct {
 
 	Performers  []Performer  `xml:"Performers>Performer"`
 	SourceFiles []SourceFile `xml:"SourceFiles>File"`
+}
+
+// A PerformanceID uniquely identifies a performance within a library
+type PerformanceID struct {
+	carrierID string
+	track     int
+}
+
+func (p PerformanceID) String() string {
+	return fmt.Sprintf("%s-%d", p.carrierID, p.track)
+}
+
+// Carrier returns the Carrier ID
+func (p PerformanceID) Carrier() string {
+	return p.carrierID
+}
+
+// ParsePerformanceID parses a PerformanceID from its strin representation
+func ParsePerformanceID(s string) (PerformanceID, error) {
+	var rv PerformanceID
+
+	parts := strings.Split(s, "-")
+	l := len(parts)
+	if len(parts) < 2 {
+		return rv, errors.New("format error")
+	}
+
+	_, err := fmt.Sscanf(parts[l-1], "%d", &rv.track)
+	if err != nil {
+		return rv, errors.New("format error")
+	}
+
+	rv.carrierID = strings.Join(parts[:l-1], "-")
+	return rv, nil
 }
 
 // A Carrier can represent either a physical medium or a packaged download.
@@ -140,6 +179,17 @@ func ImportCarrier(filename string) (*Carrier, error) {
 	err = xml.Unmarshal(ip, foo)
 	if err != nil {
 		return nil, err
+	}
+
+	sfCount := 0
+	for i, pf := range foo.Performances {
+		if len(pf.SourceFiles) > 0 {
+			foo.Performances[i].ID = PerformanceID{
+				carrierID: foo.ID,
+				track:     sfCount + 1,
+			}
+			sfCount += len(pf.SourceFiles)
+		}
 	}
 
 	return foo, nil

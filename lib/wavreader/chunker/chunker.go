@@ -27,6 +27,12 @@ type ChunkStream interface {
 	io.Reader
 }
 
+// A TimedData struct wraps arbitrary data and the time at which it can be read
+type TimedData struct {
+	T    float32
+	Data interface{}
+}
+
 type BufferStatus struct {
 	// Tmin and Tmax denote the lowest and highest wall clock time in the buffer
 	Tmin, Tmax time.Time
@@ -42,6 +48,9 @@ type BufferStatus struct {
 
 	// TotalSize is the total size (in bytes) of the buffer
 	TotalSize int
+
+	// AllAssociatedData contains all associated data in the buffer
+	AllAssociatedData []TimedData
 }
 
 type Statuser interface {
@@ -197,6 +206,13 @@ func (chcont *chunkContainer) BufferStatus() BufferStatus {
 		rv.TotalSize += len(chunk.contents)
 
 		rv.Tmax = chunk.embargo
+
+		if chunk.associatedData != nil {
+			rv.AllAssociatedData = append(rv.AllAssociatedData, TimedData{
+				T:    float32(1000.0 * chunk.embargo.Sub(nowish).Seconds()),
+				Data: chunk.associatedData,
+			})
+		}
 	}
 
 	if chcont.start < chcont.end {

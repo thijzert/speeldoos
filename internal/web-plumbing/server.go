@@ -45,6 +45,8 @@ func New(config ServerConfig) (*Server, error) {
 	s.mux.Handle("/status", s.HTMLFunc(web.StatusHandler, "full/status"))
 
 	s.mux.Handle("/api/status/buffers", s.JSONFunc(web.BufferStatusHandler))
+	s.mux.Handle("/api/search", s.HTMLFunc(web.SearchResultHandler, "fragment/searchResult"))
+	s.mux.Handle("/api/queue/add", s.JSONFunc(web.AddQueueHandler))
 
 	s.mux.Handle("/stream.mp3", s.JSONFunc(web.MP3StreamHandler))
 	s.mux.Handle("/stream.wav", s.JSONFunc(web.WAVStreamHandler))
@@ -82,10 +84,21 @@ func (s *Server) getState() web.State {
 			rv.NowPlaying = pf
 		}
 	}
+
+	s.scheduler.QueueMutex.RLock()
+	rv.PlayQueue = append(rv.PlayQueue, s.scheduler.PlayQueue...)
+	s.scheduler.QueueMutex.RUnlock()
+
 	return rv
 }
 
 // setState writes back any modified fields to the global state
-func (s *Server) setState(web.State) error {
+func (s *Server) setState(state web.State) error {
+	if state.PlayQueueDirty {
+		s.scheduler.QueueMutex.Lock()
+		s.scheduler.PlayQueue = append(s.scheduler.PlayQueue[:0], state.PlayQueue...)
+		s.scheduler.QueueMutex.Unlock()
+	}
+
 	return nil
 }
