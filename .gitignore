@@ -9,6 +9,7 @@
 **/testdata/license.txt
 /vendor/
 /speeldoos
+/build
 /speeldoos.exe
 node_modules
 /internal/web-plumbing/assets.go
