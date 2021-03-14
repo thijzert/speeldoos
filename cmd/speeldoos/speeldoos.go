@@ -12,6 +12,10 @@ import (
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
 
+// Enable benchmarking subcommands
+// TODO: hide behind compiler flag or something
+const BenchmarkingEnabled bool = true
+
 var Config = struct {
 	Subcommand     string
 	ConcurrentJobs int
@@ -216,9 +220,15 @@ func getSubCmd(name string) SubCommand {
 		return seedvault_main
 	} else if name == "server" {
 		return server_main
-	} else {
-		return nil
 	}
+
+	if BenchmarkingEnabled {
+		if name == "benchmark-samplerate" {
+			return benchmark_samplerate
+		}
+	}
+
+	return nil
 }
 
 func main() {
