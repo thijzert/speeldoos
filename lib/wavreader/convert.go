@@ -24,7 +24,10 @@ func Convert(r Reader, format StreamFormat) (Reader, error) {
 
 	rv, wri := Pipe(format)
 
-	go doConversion(wri, r)
+	go func() {
+		_, err := doConversion(wri, r)
+		wri.CloseWithError(err)
+	}()
 
 	return rv, nil
 }
