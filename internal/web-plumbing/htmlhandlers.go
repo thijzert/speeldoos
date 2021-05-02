@@ -135,6 +135,7 @@ func (s *Server) getTemplate(name string) (*template.Template, error) {
 		"addf":      templateAddf,
 		"mulf":      templateMulf,
 		"highlight": highlightSearch,
+		"urlfrag":   template.URLQueryEscaper,
 	}
 
 	if name == "full/basePage" {

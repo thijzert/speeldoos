@@ -7,7 +7,7 @@
 			{{ range $resultIndex, $performance := .Response.Performances }}
 				<tr>
 					<td class="-col-ctr">{{ add $resultIndex 1 }}</td>
-					<td class="-col-carrier">{{ $performance.ID.Carrier }}</td>
+					<td class="-col-carrier"><a href="debug/carrier/{{ $performance.ID.Carrier }}">{{ $performance.ID.Carrier }}</a></td>
 					<td class="-col-composer">{{ $performance.Work.Composer.Name }}</td>
 					<td class="-col-title">
 						{{ range $i, $title := $performance.Work.Title }}
@@ -38,7 +38,7 @@
 			<table>
 				{{ range $_, $car := .Response.FailedCarriers }}
 					<tr>
-						<td>{{ if $car.Carrier }}{{ $car.Carrier.ID }}{{ end }}</td>
+						<td>{{ if $car.Carrier }}<a href="debug/carrier/{{ $car.Carrier.ID | urlfrag }}">{{ $car.Carrier.ID }}</a>{{ end }}</td>
 						<td>{{ $car.Filename }}</td>
 						<td><pre>{{ $car.Error }}</pre></td>
 					</tr>
