@@ -10,8 +10,24 @@ import (
 )
 
 type detectedFile struct {
-	Path string
-	Disc int
+	Path      string
+	Parts     []string
+	Extension string
+	Disc      int
+}
+
+func detectFile(filename string) detectedFile {
+	rv := detectedFile{
+		Path:  filename,
+		Parts: strings.Split(filename, "/"),
+	}
+
+	exts := strings.Split(rv.Parts[len(rv.Parts)-1], ".")
+	if len(exts) > 1 {
+		rv.Extension = exts[len(exts)-1]
+	}
+
+	return rv
 }
 
 type preliminaryCarrier struct {
@@ -122,9 +138,7 @@ func scanDirectory(dirname string) ([]detectedFile, error) {
 		rv = append(rv, subf...)
 	}
 	for _, fullpath := range files {
-		rv = append(rv, detectedFile{
-			Path: fullpath,
-		})
+		rv = append(rv, detectFile(fullpath))
 	}
 
 	return rv, nil
@@ -138,9 +152,7 @@ func scanZip(archivePath string) ([]detectedFile, error) {
 	}
 
 	for _, fi := range zf.File {
-		rv = append(rv, detectedFile{
-			Path: path.Join(archivePath, fi.Name),
-		})
+		rv = append(rv, detectFile(path.Join(archivePath, fi.Name)))
 	}
 
 	return rv, nil
@@ -212,10 +224,38 @@ func (oneGiantPerformance) Infer(pc preliminaryCarrier) preliminaryCarrier {
 		Year: 2222,
 	}
 
+	// Find the longest common prefix of all path-parts
+	offset := 0
+	ok := true
+	var firstFlac detectedFile
+	for ok {
+		ok = false
+		for _, f := range pc.SourceFiles {
+			if f.Extension != "flac" {
+				continue
+			}
+			ok = true
+			if firstFlac.Path == "" {
+				firstFlac = f
+			}
+			if len(f.Parts) <= offset || f.Parts[offset] != firstFlac.Parts[offset] {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			offset++
+		}
+	}
+
 	for _, f := range pc.SourceFiles {
-		if len(f.Path) < 7 || f.Path[len(f.Path)-5:] != ".flac" {
+		if f.Extension != "flac" {
 			continue
 		}
+		pt := strings.Join(f.Parts[offset:], " - ")
+		pf.Work.Parts = append(pf.Work.Parts, Part{
+			Part: pt[:len(pt)-5],
+		})
 		pf.SourceFiles = append(pf.SourceFiles, SourceFile{
 			Disc:     f.Disc,
 			Filename: f.Path,
