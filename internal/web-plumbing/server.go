@@ -43,6 +43,7 @@ func New(config ServerConfig) (*Server, error) {
 
 	s.mux.Handle("/", s.HTMLFunc(web.HomeHandler, "full/home"))
 	s.mux.Handle("/status", s.HTMLFunc(web.StatusHandler, "full/status"))
+	s.mux.Handle("/library", s.HTMLFunc(web.LibraryHandler, "full/library"))
 
 	s.mux.Handle("/api/status/buffers", s.JSONFunc(web.BufferStatusHandler))
 	s.mux.Handle("/api/search", s.HTMLFunc(web.SearchResultHandler, "fragment/searchResult"))

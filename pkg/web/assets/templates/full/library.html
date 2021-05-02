@@ -1,0 +1,36 @@
+{{define `contents`}}
+
+<main class="library">
+	<section>
+		<table>
+			{{ range $resultIndex, $performance := .Response.Performances }}
+				<tr>
+					<td class="-col-ctr">{{ add $resultIndex 1 }}</td>
+					<td class="-col-composer">{{ $performance.Work.Composer.Name }}</td>
+					<td class="-col-title">
+						{{ range $i, $title := $performance.Work.Title }}
+							{{ if $i }}
+								<div class="-title -aka">{{ $title.Title }}</div>
+							{{ else }}
+								<div class="-title">{{ $title.Title }}</div>
+							{{ end }}
+						{{ end }}
+					</td>
+					<td class="-col-opus">
+						{{ range $i, $opus := $performance.Work.OpusNumber }}
+							{{ if $i }}
+								<div class="-opus -aka">{{ $opus }}</div>
+							{{ else }}
+								<div class="-opus">{{ $opus }}</div>
+							{{ end }}
+						{{ end }}
+					</td>
+					<td class="-col-year">{{ if $performance.Work.Year }}{{ $performance.Work.Year }}{{ end }}</td>
+				</tr>
+			{{ end }}
+		</table>
+	</section>
+</main>
+
+{{end}}
+
