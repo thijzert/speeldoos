@@ -69,7 +69,8 @@ func (l *Library) Refresh() error {
 	}
 
 	l.Carriers = rv
-	return nil
+
+	return l.refreshInbox()
 }
 
 // AllCarriers filters all Carriers in the library, and returns those that are error-free

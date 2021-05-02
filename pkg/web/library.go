@@ -3,6 +3,7 @@ package web
 import (
 	"net/http"
 	"sort"
+	"strings"
 
 	speeldoos "github.com/thijzert/speeldoos/pkg"
 )
@@ -13,10 +14,13 @@ type libraryHandler struct{}
 
 func (libraryHandler) handleLibrary(s State, r libraryRequest) (State, libraryResponse, error) {
 	var rv libraryResponse
-	rv.Performances = make([]speeldoos.Performance, 0, 50)
 
 	for _, car := range s.Library.Carriers {
-		rv.Performances = append(rv.Performances, car.Carrier.Performances...)
+		if car.Error == nil {
+			rv.Performances = append(rv.Performances, car.Carrier.Performances...)
+		} else {
+			rv.FailedCarriers = append(rv.FailedCarriers, car)
+		}
 	}
 
 	sort.Sort(&rv)
@@ -43,7 +47,8 @@ type libraryRequest struct {
 func (libraryRequest) FlaggedAsRequest() {}
 
 type libraryResponse struct {
-	Performances []speeldoos.Performance
+	Performances   []speeldoos.Performance
+	FailedCarriers []speeldoos.ParsedCarrier
 }
 
 func (r *libraryResponse) Len() int {
@@ -59,8 +64,20 @@ func (r *libraryResponse) Less(i, j int) bool {
 
 	if a.Work.Year > b.Work.Year {
 		return true
-	} else if a.Work.Year == b.Work.Year && a.Year < b.Year {
+	} else if a.Work.Year < b.Work.Year {
+		return false
+	}
+
+	if len(a.Work.OpusNumber) > 0 && len(b.Work.OpusNumber) > 0 {
+		if s := strings.Compare(a.Work.OpusNumber[0].Number, b.Work.OpusNumber[0].Number); s != 0 {
+			return s < 0
+		}
+	}
+
+	if a.Year < b.Year {
 		return true
+	} else if a.Year > b.Year {
+		return false
 	}
 
 	return false

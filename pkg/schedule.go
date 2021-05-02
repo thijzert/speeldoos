@@ -71,7 +71,7 @@ func (s *Scheduler) NextPerformance() Performance {
 
 	pfii := make([]Performance, 0, 50)
 
-	for _, car := range s.Library.Carriers {
+	for _, car := range s.Library.AllCarriers() {
 		for _, pf := range car.Carrier.Performances {
 			pfii = append(pfii, pf)
 		}

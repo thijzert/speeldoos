@@ -2,10 +2,12 @@
 
 <main class="library">
 	<section>
+		<h3>Library</h3>
 		<table>
 			{{ range $resultIndex, $performance := .Response.Performances }}
 				<tr>
 					<td class="-col-ctr">{{ add $resultIndex 1 }}</td>
+					<td class="-col-carrier">{{ $performance.ID.Carrier }}</td>
 					<td class="-col-composer">{{ $performance.Work.Composer.Name }}</td>
 					<td class="-col-title">
 						{{ range $i, $title := $performance.Work.Title }}
@@ -30,6 +32,20 @@
 			{{ end }}
 		</table>
 	</section>
+	{{ if .Response.FailedCarriers }}
+		<section>
+			<h3>Failed carriers</h3>
+			<table>
+				{{ range $_, $car := .Response.FailedCarriers }}
+					<tr>
+						<td>{{ if $car.Carrier }}{{ $car.Carrier.ID }}{{ end }}</td>
+						<td>{{ $car.Filename }}</td>
+						<td><pre>{{ $car.Error }}</pre></td>
+					</tr>
+				{{ end }}
+			</table>
+		</section>
+	{{ end }}
 </main>
 
 {{end}}
