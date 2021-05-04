@@ -19,7 +19,8 @@ jobs:
       with:
         include: 'v*'
         exclude: '*-rc*'
-        commit-ish: 'HEAD~'
+        commit-ish: 'HEAD'
+        abbrev: 7
 
     - name: Set up Go
       uses: actions/setup-go@v2
