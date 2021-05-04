@@ -123,7 +123,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 	if conf.PackageVersion == "" {
 		gitDescCmd := exec.CommandContext(ctx, "git", "describe")
 		gitDescribe, err := gitDescCmd.Output()
-		if err != nil {
+		if err != nil || len(gitDescribe) == 0 {
 			conf.PackageVersion = "default version"
 		} else {
 			conf.PackageVersion = string(gitDescribe)
