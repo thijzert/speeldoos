@@ -54,7 +54,11 @@ func (t *toms) Close() error {
 func TestTomsDiner(t *testing.T) {
 	in, err := tomsDiner()
 	if err != nil {
-		t.Error(err)
+		if testing.Short() {
+			t.Skip()
+		} else {
+			t.Error(err)
+		}
 		return
 	}
 	defer in.Close()
@@ -76,7 +80,11 @@ func TestTomsDiner(t *testing.T) {
 func TestMP3Splitting(t *testing.T) {
 	td, err := tomsDiner()
 	if err != nil {
-		t.Error(err)
+		if testing.Short() {
+			t.Skip()
+		} else {
+			t.Error(err)
+		}
 		return
 	}
 
