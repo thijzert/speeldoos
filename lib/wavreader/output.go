@@ -24,7 +24,7 @@ func (c Config) AudioOutput() (Writer, error) {
 		format.Rate,
 		(format.Bits+7)/8,
 	)
-	mpl := exec.Command(c.MPlayerPath,
+	mpl := exec.Command(c.mplayer(),
 		"-really-quiet",
 		"-noconsolecontrols", "-nomouseinput", "-nolirc",
 		"-cache", "1024",
