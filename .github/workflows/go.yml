@@ -11,24 +11,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Determine version
-      id: tagger
-      uses: jimschubert/query-tag-action@v1
-      with:
-        include: 'v*'
-        exclude: '*-rc*'
-        commit-ish: 'HEAD'
-        abbrev: 7
+    - id: checkout
+      uses: actions/checkout@v3
+      run: |
+        echo -n "version=" >> "$GITHUB_OUTPUT"
+        git describe >> "$GITHUB_OUTPUT"
 
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
-        go-version: 1.18
+        go-version: 1.19
 
     - name: Build
-      run: go run build.go -version "${{steps.tagger.outputs.tag}}"
+      run: go run build.go -version "${{steps.checkout.outputs.version}}"
 
     - name: Test
       run: go test -v -short ./...
