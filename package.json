@@ -55,7 +55,7 @@
     "core-js": "^3.8.1",
     "eslint": "^7.16.0",
     "gulp-minify": "^3.1.0",
-    "npm-check-updates": "^7.1.1",
+    "npm-check-updates": "^16.7.5",
     "postcss-clean": "^1.1.0",
     "rollup-plugin-node-resolve": "^5.2.0"
   },
