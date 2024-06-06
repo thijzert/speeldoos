@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/thijzert/go-resemble"
+
+	esb "github.com/evanw/esbuild/pkg/api"
 )
 
 type job func(ctx context.Context) error
@@ -48,9 +51,7 @@ func main() {
 
 	if conf.Development && conf.Quick {
 		log.Printf("")
-		log.Printf("You requested a quick build. This will assume")
-		log.Printf(" you have a version of  `gulp watch`  running")
-		log.Printf(" in a separate process.")
+		log.Printf("You requested a quick build. This will not re-build static assets.")
 		log.Printf("")
 	}
 
@@ -82,24 +83,80 @@ func main() {
 }
 
 func compile(ctx context.Context, conf compileConfig) error {
-	// Check for local gulp
-	fi, err := os.Stat("node_modules/.bin/gulp")
-	if (!conf.Development && !conf.Quick) || err != nil || fi.Mode()&0x1 != 1 {
-		err = passthru(ctx, "npm", "install")
-		if err != nil {
-			return errors.WithMessage(err, "error installing local gulp")
+	// Compile static assets: Javascript
+	err := os.MkdirAll("pkg/web/assets/dist/js", 0755)
+	if err != nil {
+		return fmt.Errorf("cannot create JS output directory: %w", err)
+	}
+	result := esb.Build(esb.BuildOptions{
+		EntryPoints: []string{"pkg/web/assets/src/js/**/*.js"},
+		Outdir:      "pkg/web/assets/dist/js",
+		Write:       true,
+	})
+	if len(result.Errors) != 0 {
+		for _, err := range result.Errors {
+			log.Printf("%v", err)
 		}
+		return fmt.Errorf("error compiling Javascript: %v", result.Errors[len(result.Errors)-1])
 	}
 
-	// Compile static assets
-	production := "--production"
+	err = os.MkdirAll("pkg/web/assets/dist/ancient-js", 0755)
+	if err != nil {
+		return fmt.Errorf("cannot create JS output directory: %w", err)
+	}
+	result = esb.Build(esb.BuildOptions{
+		EntryPoints: []string{"pkg/web/assets/src/js/speeldoos.js"},
+		Outdir:      "pkg/web/assets/dist/ancient-js",
+		Target:      esb.ES2015,
+		Bundle:      true,
+		Write:       true,
+	})
+	if len(result.Errors) != 0 {
+		for _, err := range result.Errors {
+			log.Printf("%v", err)
+		}
+		return fmt.Errorf("error compiling Javascript: %w", result.Errors[len(result.Errors)-1])
+	}
+
+	// Compile static assets: SCSS
+	scssStyle := "compressed"
+	scssMap := "--omit-map-comment"
 	if conf.Development {
-		production = "--development"
+		scssStyle = "nested"
+		scssMap = "--sourcemap"
+	}
+	compileSCSS := func(file string) error {
+		if len(file) < 6 || file[0:1] == "_" || file[len(file)-5:] != ".scss" {
+			return nil
+		}
+		sourceFile := path.Join("pkg/web/assets/src/scss", file)
+		targetFile := path.Join("pkg/web/assets/dist/css", file[:len(file)-5]+".css")
+
+		err := os.MkdirAll(path.Dir(targetFile), 0755)
+		if err != nil {
+			return fmt.Errorf("cannot create CSS output directory: %w", err)
+		}
+		err = passthru(ctx, "sassc", "--style", scssStyle, scssMap, sourceFile, targetFile)
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("error compiling assets: error compiling '%s'", file))
+		}
+		return nil
 	}
 	if !conf.Development || !conf.Quick {
-		err = passthru(ctx, "node_modules/.bin/gulp", "compile", production)
+		err := compileSCSS("speeldoos.scss")
 		if err != nil {
-			return errors.WithMessage(err, "error compiling assets")
+			return err
+		}
+		d, err := os.Open("pkg/web/assets/src/scss/pages")
+		if err != nil {
+			return err
+		}
+		pages, _ := d.Readdirnames(-1)
+		for _, page := range pages {
+			err := compileSCSS(path.Join("pages", page))
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -115,6 +172,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 		".",
 	}
 	if err := emb.Run(); err != nil {
+		os.Chdir("../../..")
 		return errors.WithMessage(err, "error running 'resemble'")
 	}
 
@@ -163,9 +221,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 
 	if conf.Development && !conf.Quick {
 		log.Printf("")
-		log.Printf("Development build finished. For best results,")
-		log.Printf(" run  `node_modules/.bin/gulp watch`  in a")
-		log.Printf(" separate process.")
+		log.Printf("Development build finished.")
 		log.Printf("")
 	} else {
 		log.Printf("Compilation finished.")

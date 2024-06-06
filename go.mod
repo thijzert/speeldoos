@@ -1,9 +1,10 @@
 module github.com/thijzert/speeldoos
 
-go 1.18
+go 1.22
 
 require (
 	github.com/anacrolix/torrent v1.48.0
+	github.com/evanw/esbuild v0.21.4
 	github.com/pkg/errors v0.9.1
 	github.com/thijzert/go-rcfile v0.0.0-20161124154356-8a438d6f08d5
 	github.com/thijzert/go-resemble v1.5.0
