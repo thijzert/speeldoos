@@ -6,17 +6,6 @@
 
 let sassPaths = [ ".", "..", "node_modules/sass-mq" ];
 
-let svgConfig = {
-	"svg": {
-		"xmlDeclaration": false,
-		"doctypeDeclaration": false
-	},
-	"mode": {
-		"symbol": true,
-		"inline": true
-	}
-};
-
 let gulp            = require("gulp");
 let sourcemaps      = require("gulp-sourcemaps");
 let minify          = require('gulp-minify');
@@ -28,76 +17,14 @@ let postCssReporter = require("postcss-reporter");
 let postCssPxtorem  = require('postcss-pxtorem');
 let postCssSvg      = require("postcss-inline-svg");
 let postCssRange    = require("postcss-input-range");
-let webpackStream   = require('webpack-stream');
-let webpack         = require('webpack');
 let gulpif          = require('gulp-if');
 let argv            = require('yargs').argv;
-let named           = require('vinyl-named')
 let babel           = require('gulp-babel');
 let changed         = require('gulp-changed');
 let csso            = require('gulp-csso');
 let cached          = require('gulp-cached');
 let dependents      = require('gulp-dependents');
 
-
-// Compile to ES5 (Ancient browsers)
-const compileToES5 = function()
-{
-	let jsEntrypoints = [
-		"pkg/web/assets/src/js/speeldoos.js",
-	];
-
-	let webpackConfig = {
-		mode: "production",
-		output: {
-			filename: "[name].js",
-			publicPath: "/ancient-js/",
-		},
-		module: {
-			rules: [
-				{
-					test: /\.js$/,
-					exclude: /node_modules/,
-					use: {
-						loader: "babel-loader",
-						options: {
-							sourceMap: "inline",
-							presets: [
-								[
-									"@babel/preset-env",
-									{
-										debug: false,
-										targets: {
-											browsers: [
-												"defaults",
-												"ie >=11"
-											]
-										},
-										useBuiltIns: "usage",
-										modules: false,
-										corejs: 3
-									}
-								]
-							]
-						}
-					}
-				}
-			]
-		},
-	};
-
-	if ( !argv.production )
-	{
-		webpackConfig.mode = "development";
-	}
-
-	return gulp.src( jsEntrypoints ).
-		pipe(gulpif(!argv.production, sourcemaps.init())).
-		pipe(named()).
-		pipe(webpackStream( webpackConfig, webpack )).
-		pipe(gulpif(!argv.production, sourcemaps.write())).
-		pipe(gulp.dest("pkg/web/assets/dist/ancient-js/"));
-};
 
 // Compile to ES2015+ (Modules)
 const compileToES2015 = function()
@@ -133,11 +60,9 @@ const compileToES2015 = function()
 };
 
 
-const compileBothScripts = gulp.series( compileToES2015, compileToES5 );
-
 const watchScript = function()
 {
-	gulp.watch( [ "pkg/web/assets/src/js/**/*.js" ], compileBothScripts );
+	gulp.watch( [ "pkg/web/assets/src/js/**/*.js" ], compileToES2015 );
 };
 
 // Compile CSS
@@ -175,13 +100,12 @@ const watchStyle = function()
 
 const compileTasks = gulp.parallel(
 	compileStyle,
-	compileToES5,
 	compileToES2015,
 );
 
 const watchTasks = gulp.parallel(
 	gulp.series( compileStyle, watchStyle ),
-	gulp.series( compileBothScripts, watchScript )
+	gulp.series( compileToES2015, watchScript )
 );
 
 gulp.task( "default", compileTasks );

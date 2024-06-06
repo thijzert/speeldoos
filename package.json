@@ -42,10 +42,6 @@
     "postcss-svgo": "^4.0.2",
     "prettier": "^2.2.1",
     "stylelint": "^13.8.0",
-    "vinyl-named": "^1.1.0",
-    "webpack": "^4.44.1",
-    "webpack-cli": "^3.3.12",
-    "webpack-stream": "^5.2.1",
     "yargs": "^15.4.1"
   },
   "dependencies": {
