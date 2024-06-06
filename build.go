@@ -18,6 +18,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/thijzert/go-resemble"
+
+	esb "github.com/evanw/esbuild/pkg/api"
 )
 
 type job func(ctx context.Context) error
@@ -81,6 +83,41 @@ func main() {
 }
 
 func compile(ctx context.Context, conf compileConfig) error {
+	// Compile static assets: Javascript
+	err := os.MkdirAll("pkg/web/assets/dist/js", 0755)
+	if err != nil {
+		return fmt.Errorf("cannot create JS output directory: %w", err)
+	}
+	result := esb.Build(esb.BuildOptions{
+		EntryPoints: []string{"pkg/web/assets/src/js/**/*.js"},
+		Outdir:      "pkg/web/assets/dist/js",
+		Write:       true,
+	})
+	if len(result.Errors) != 0 {
+		for _, err := range result.Errors {
+			log.Printf("%v", err)
+		}
+		return fmt.Errorf("error compiling Javascript: %v", result.Errors[len(result.Errors)-1])
+	}
+
+	err = os.MkdirAll("pkg/web/assets/dist/ancient-js", 0755)
+	if err != nil {
+		return fmt.Errorf("cannot create JS output directory: %w", err)
+	}
+	result = esb.Build(esb.BuildOptions{
+		EntryPoints: []string{"pkg/web/assets/src/js/speeldoos.js"},
+		Outdir:      "pkg/web/assets/dist/ancient-js",
+		Target:      esb.ES2015,
+		Bundle:      true,
+		Write:       true,
+	})
+	if len(result.Errors) != 0 {
+		for _, err := range result.Errors {
+			log.Printf("%v", err)
+		}
+		return fmt.Errorf("error compiling Javascript: %w", result.Errors[len(result.Errors)-1])
+	}
+
 	// Compile static assets: SCSS
 	scssStyle := "compressed"
 	scssMap := "--omit-map-comment"
@@ -135,6 +172,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 		".",
 	}
 	if err := emb.Run(); err != nil {
+		os.Chdir("../../..")
 		return errors.WithMessage(err, "error running 'resemble'")
 	}
 
