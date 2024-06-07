@@ -82,40 +82,40 @@ func main() {
 	}
 }
 
-func compile(ctx context.Context, conf compileConfig) error {
-	// Compile static assets: Javascript
-	err := os.MkdirAll("pkg/web/assets/dist/js", 0755)
+func compileJavascript(target esb.Target, outDir string, entryPoints ...string) error {
+	err := os.MkdirAll(outDir, 0755)
 	if err != nil {
-		return fmt.Errorf("cannot create JS output directory: %w", err)
+		return fmt.Errorf("cannot create output directory: %w", err)
 	}
 	result := esb.Build(esb.BuildOptions{
-		EntryPoints: []string{"pkg/web/assets/src/js/**/*.js"},
-		Outdir:      "pkg/web/assets/dist/js",
+		EntryPoints: entryPoints,
+		Target:      target,
+		Outdir:      outDir,
 		Write:       true,
 	})
-	if len(result.Errors) != 0 {
-		for _, err := range result.Errors {
-			log.Printf("%v", err)
-		}
-		return fmt.Errorf("error compiling Javascript: %v", result.Errors[len(result.Errors)-1])
+
+	var rv error
+	for _, err := range result.Warnings {
+		log.Printf("Warning: %s in %s on line %d", err.Text, err.Location.File, err.Location.Line)
+	}
+	for _, err := range result.Errors {
+		log.Printf("Error: %s in %s on line %d", err.Text, err.Location.File, err.Location.Line)
+		rv = fmt.Errorf("%s in %s on line %d", err.Text, err.Location.File, err.Location.Line)
 	}
 
-	err = os.MkdirAll("pkg/web/assets/dist/ancient-js", 0755)
+	return rv
+}
+
+func compile(ctx context.Context, conf compileConfig) error {
+	// Compile static assets: Javascript
+	err := compileJavascript(esb.ESNext, "pkg/web/assets/dist/js", "pkg/web/assets/src/js/**/*.js")
 	if err != nil {
-		return fmt.Errorf("cannot create JS output directory: %w", err)
+		return fmt.Errorf("error compiling javascript: %w", err)
 	}
-	result = esb.Build(esb.BuildOptions{
-		EntryPoints: []string{"pkg/web/assets/src/js/speeldoos.js"},
-		Outdir:      "pkg/web/assets/dist/ancient-js",
-		Target:      esb.ES2015,
-		Bundle:      true,
-		Write:       true,
-	})
-	if len(result.Errors) != 0 {
-		for _, err := range result.Errors {
-			log.Printf("%v", err)
-		}
-		return fmt.Errorf("error compiling Javascript: %w", result.Errors[len(result.Errors)-1])
+
+	err = compileJavascript(esb.ES2015, "pkg/web/assets/dist/ancient-js", "pkg/web/assets/src/js/speeldoos.js")
+	if err != nil {
+		return fmt.Errorf("error compiling ancient javascript: %w", err)
 	}
 
 	// Compile static assets: SCSS
