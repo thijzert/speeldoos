@@ -15,6 +15,8 @@ func (s *Server) redirect(w http.ResponseWriter, r *http.Request, url string, st
 
 	if len(url) == 0 {
 		url = "."
+	} else if len(url) > 1 && url[:2] == "//" {
+		url = "."
 	} else if url[0] != '/' && url[0] != '.' {
 		url = "./" + url
 	}
