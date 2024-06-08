@@ -1,6 +1,6 @@
 module github.com/thijzert/speeldoos
 
-go 1.22
+go 1.22.3
 
 require (
 	github.com/anacrolix/torrent v1.56.0

@@ -8,8 +8,7 @@ Building
 --------
 Speeldoos has some compile-time dependencies:
 
-* Go (≥ 1.15, though some older releases wil probably also work)
-* NodeJS (≥ 14 - using a LTS release is highly recommended)
+* Go (≥ 1.22, though some older releases wil probably also work)
 
 To run, different parts of speeldoos will have different dependencies; install them as needed.
 In no particular order, the runtime dependencies include:
@@ -21,8 +20,8 @@ In no particular order, the runtime dependencies include:
 
 On my machines I installed most of these using one of the following commands:
 
-* `sudo apt-get install flac lame id3v2 mplayer nodejs`
-* `sudo pacman -S flac lame id3v2 mplayer nodejs-lts-fermium`
+* `sudo apt-get install flac lame id3v2 mplayer`
+* `sudo pacman -S flac lame id3v2 mplayer`
 
 However, your mileage may vary.
 
@@ -44,12 +43,11 @@ Afterwards (you may need to restart your shell first), use the `sd` (or `speeldo
     sd init --composer="Johann Sebastian Bach" 48
 
 ### Development build
-If you intend to contribute to speeldoos, running a development build is advisable. This build process consists of two parts, which can be run in parallel:
+If you intend to contribute to speeldoos, running a development build is advisable:
 
-* `gulp watch`
 * `go run build.go --quick --development --watch`
 
-Both these commands will keep running and watch the source tree, recompiling if changes are detected. (the js and css, and the binary, respectively).
+This command will keep running and watch the source tree, recompiling if changes are detected.
 
 The build script also accepts a `--run` flag, which immediately runs the newly compiled binary whenever something changes.
 To continuously run a web server, one could use:
