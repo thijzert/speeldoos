@@ -12,7 +12,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -106,6 +108,109 @@ func compileJavascript(target esb.Target, outDir string, entryPoints ...string) 
 	return rv
 }
 
+func inlineSvg(w io.Writer, file string, fill string) error {
+	buf, err := os.ReadFile(path.Join("pkg/web/assets/src/svg", file))
+	if err != nil {
+		return fmt.Errorf("error reading svg file: %w", err)
+	}
+	rv := string(buf)
+	rv = strings.TrimSpace(rv)
+	for len(rv) > 5 && (rv[:2] == "<?" || rv[:4] == "<!--") {
+		search := "-->"
+		if rv[:2] == "<?" {
+			search = "?>"
+		}
+		idx := strings.Index(rv, search)
+		if idx <= 0 {
+			break
+		}
+		rv = strings.TrimSpace(rv[idx+len(search):])
+	}
+
+	if fill != "" {
+		// Hack the fill colour in there.
+		// (If it's stupid and works, it wasn't stupid.)
+		idx := 1 + strings.Index(rv[1:], "<")
+		if idx != -1 {
+			idx1 := idx + strings.Index(rv[idx:], ">")
+			idx2 := idx + strings.Index(rv[idx:], " ")
+			if idx2 > -1 && idx2 < idx1 {
+				idx1 = idx2
+			}
+
+			rv = rv[:idx1] + " fill=\"" + fill + "\"" + rv[idx1:]
+		}
+	}
+
+	rv = strings.ReplaceAll(rv, "%", "%25")
+	rv = strings.ReplaceAll(rv, "#", "%23")
+	rv = strings.ReplaceAll(rv, "<", "%3C")
+	rv = strings.ReplaceAll(rv, ">", "%3E")
+	rv = strings.ReplaceAll(rv, "?", "%3F")
+	rv = strings.ReplaceAll(rv, "\"", "'")
+	rv = strings.ReplaceAll(rv, "\n", " ")
+
+	_, err = fmt.Fprintf(w, "url(\"data:image/svg+xml,%s\")", rv)
+	return err
+}
+
+func compileSCSS(ctx context.Context, conf compileConfig, file string) error {
+	scssStyle := "compressed"
+	scssMap := "--omit-map-comment"
+	if conf.Development {
+		scssStyle = "nested"
+		scssMap = "--sourcemap"
+	}
+
+	if len(file) < 6 || file[0:1] == "_" || file[len(file)-5:] != ".scss" {
+		return nil
+	}
+	sourceFile := path.Join("pkg/web/assets/src/scss", file)
+	targetFile := path.Join("pkg/web/assets/dist/css", file[:len(file)-5]+".css")
+
+	err := os.MkdirAll(path.Dir(targetFile), 0755)
+	if err != nil {
+		return fmt.Errorf("cannot create CSS output directory: %w", err)
+	}
+	err = passthru(ctx, "sassc", "--style", scssStyle, scssMap, sourceFile, targetFile)
+	if err != nil {
+		return errors.WithMessage(err, fmt.Sprintf("error compiling assets: error compiling '%s'", file))
+	}
+
+	// Inline SVG images
+	if true {
+		buf, err := os.ReadFile(targetFile)
+		if err != nil {
+			return fmt.Errorf("error reading css output: %w", err)
+		}
+		f, err := os.Create(targetFile)
+		if err != nil {
+			return fmt.Errorf("error reopening css output: %w", err)
+		}
+		defer f.Close()
+		re := regexp.MustCompile("svg-load\\(\"([^\"]+)\"(,\\s*fill=([^\\)]+))?\\)")
+		lastIndex := 0
+		matches := re.FindAllSubmatchIndex(buf, -1)
+		for _, m := range matches {
+			_, err = f.Write(buf[lastIndex:m[0]])
+			if err != nil {
+				return fmt.Errorf("error writing css chunk: %w", err)
+			}
+			err = inlineSvg(f, string(buf[m[2]:m[3]]), string(buf[m[6]:m[7]]))
+			if err != nil {
+				return fmt.Errorf("error writing inlined svg image: %w", err)
+			}
+			lastIndex = m[1]
+		}
+		_, err = f.Write(buf[lastIndex:])
+		if err != nil {
+			return fmt.Errorf("error writing css chunk: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func compile(ctx context.Context, conf compileConfig) error {
 	// Compile static assets: Javascript
 	err := compileJavascript(esb.ESNext, "pkg/web/assets/dist/js", "pkg/web/assets/src/js/**/*.js")
@@ -119,31 +224,8 @@ func compile(ctx context.Context, conf compileConfig) error {
 	}
 
 	// Compile static assets: SCSS
-	scssStyle := "compressed"
-	scssMap := "--omit-map-comment"
-	if conf.Development {
-		scssStyle = "nested"
-		scssMap = "--sourcemap"
-	}
-	compileSCSS := func(file string) error {
-		if len(file) < 6 || file[0:1] == "_" || file[len(file)-5:] != ".scss" {
-			return nil
-		}
-		sourceFile := path.Join("pkg/web/assets/src/scss", file)
-		targetFile := path.Join("pkg/web/assets/dist/css", file[:len(file)-5]+".css")
-
-		err := os.MkdirAll(path.Dir(targetFile), 0755)
-		if err != nil {
-			return fmt.Errorf("cannot create CSS output directory: %w", err)
-		}
-		err = passthru(ctx, "sassc", "--style", scssStyle, scssMap, sourceFile, targetFile)
-		if err != nil {
-			return errors.WithMessage(err, fmt.Sprintf("error compiling assets: error compiling '%s'", file))
-		}
-		return nil
-	}
 	if !conf.Development || !conf.Quick {
-		err := compileSCSS("speeldoos.scss")
+		err := compileSCSS(ctx, conf, "speeldoos.scss")
 		if err != nil {
 			return err
 		}
@@ -153,7 +235,7 @@ func compile(ctx context.Context, conf compileConfig) error {
 		}
 		pages, _ := d.Readdirnames(-1)
 		for _, page := range pages {
-			err := compileSCSS(path.Join("pages", page))
+			err := compileSCSS(ctx, conf, path.Join("pages", page))
 			if err != nil {
 				return err
 			}
