@@ -1,6 +1,6 @@
 module github.com/thijzert/speeldoos
 
-go 1.22.3
+go 1.24.0
 
 require (
 	github.com/anacrolix/torrent v1.56.0
@@ -9,8 +9,8 @@ require (
 	github.com/thijzert/go-rcfile v0.0.0-20161124154356-8a438d6f08d5
 	github.com/thijzert/go-resemble v1.5.0
 	github.com/thijzert/go-termcolours v0.0.0-20171031170714-d434be3e67cd
-	golang.org/x/crypto v0.24.0
-	golang.org/x/text v0.16.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/text v0.31.0
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
-	golang.org/x/sys v0.21.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
 	lukechampine.com/blake3 v1.3.0 // indirect
 )
